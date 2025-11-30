@@ -36,6 +36,7 @@ private:
     void createLogicalDevice();
     void createDescriptorPool();
     void createCommandPool();
+    void loadVulkanRTFunctions();
 
     // Debug messenger for validation layers
     VkDebugUtilsMessengerEXT debugMessenger;

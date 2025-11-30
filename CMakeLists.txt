@@ -38,6 +38,9 @@ set(LIBRARIES
 # Handle .cpp files
 file(GLOB SOURCES
     src/*
+    src/utils/*
+    src/structure/*
+    src/geometry/*
 )
 
 # Handle .h files

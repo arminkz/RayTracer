@@ -35,9 +35,29 @@ namespace VulkanHelper {
     uint64_t getBufferDeviceAddress(const std::shared_ptr<VulkanContext>& ctx, 
         VkBuffer buffer);
 
-    void createImage(const std::shared_ptr<VulkanContext>& ctx, uint32_t width, uint32_t height, VkFormat format, uint32_t mipLevels, uint32_t arrayLayers, VkSampleCountFlagBits numSamples, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, VkImageCreateFlags flags = 0);
-    VkImageView createImageView(const std::shared_ptr<VulkanContext>& ctx, VkImage image, VkFormat format, uint32_t mipLevels, uint32_t arrayLayers, VkImageAspectFlags aspectFlags, VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D);
+    void createImage(const std::shared_ptr<VulkanContext>& ctx, 
+        uint32_t width, uint32_t height, 
+        VkFormat format, 
+        uint32_t mipLevels, 
+        uint32_t arrayLayers, 
+        VkSampleCountFlagBits numSamples, 
+        VkImageTiling tiling, 
+        VkImageUsageFlags usage, 
+        VkMemoryPropertyFlags properties, 
+        VkImage& image, VkDeviceMemory& imageMemory, 
+        VkImageCreateFlags flags = 0);
     
+    
+    VkImageView createImageView(const std::shared_ptr<VulkanContext>& ctx, 
+        VkImage image, 
+        VkFormat format, 
+        uint32_t mipLevels, 
+        uint32_t arrayLayers, 
+        VkImageAspectFlags aspectFlags, 
+        VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D);
+    
+    
+    // Single time command buffer version
     void transitionImageLayout(const std::shared_ptr<VulkanContext>& ctx, 
         VkImage image, 
         VkImageSubresourceRange subresourceRange, 
@@ -45,6 +65,17 @@ namespace VulkanHelper {
         VkImageLayout newLayout, 
         VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 
         VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+    // Command buffer version
+    void transitionImageLayout(const std::shared_ptr<VulkanContext>& ctx, 
+        VkCommandBuffer commandBuffer,
+        VkImage image, 
+        VkImageSubresourceRange subresourceRange, 
+        VkImageLayout oldLayout, 
+        VkImageLayout newLayout, 
+        VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 
+        VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
 
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
@@ -56,4 +87,7 @@ namespace VulkanHelper {
 
     std::string formatToString(VkFormat format);
 
+    std::string imageLayoutToString(VkImageLayout layout);
+
+    uint32_t alignedSize(uint32_t value, uint32_t alignment);
 }

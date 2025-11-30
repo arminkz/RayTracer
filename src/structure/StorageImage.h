@@ -9,10 +9,12 @@ public:
     StorageImage(std::shared_ptr<VulkanContext> ctx, uint32_t width, uint32_t height, VkFormat format);
     ~StorageImage();
 
-    void cleanup();
+    void destroy();
 
     VkImage getImage() const { return _image; }
     VkImageView getImageView() const { return _imageView; }
+
+    VkDescriptorImageInfo getDescriptorInfo() const;
 
 private:
     std::shared_ptr<VulkanContext> _ctx;

@@ -24,6 +24,8 @@ public:
 private:
     std::shared_ptr<VulkanContext> _ctx;
 
+    //TODO: Use Buffer class instead of raw VkBuffer and VkDeviceMemory
+    
     VkBuffer _vertexBuffer;
     VkDeviceMemory _vertexBufferMemory;
     VkDeviceOrHostAddressConstKHR _vertexBufferDeviceAddress{};

@@ -21,12 +21,20 @@ StorageImage::StorageImage(std::shared_ptr<VulkanContext> ctx, uint32_t width, u
 
 StorageImage::~StorageImage()
 {
-    cleanup();
+    destroy();
 }
 
-void StorageImage::cleanup()
+void StorageImage::destroy()
 {
     vkDestroyImageView(_ctx->device, _imageView, nullptr);
     vkDestroyImage(_ctx->device, _image, nullptr);
     vkFreeMemory(_ctx->device, _imageMemory, nullptr);
+}
+
+VkDescriptorImageInfo StorageImage::getDescriptorInfo() const {
+    VkDescriptorImageInfo imageInfo{};
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    imageInfo.imageView = _imageView;
+    imageInfo.sampler = VK_NULL_HANDLE; // Not needed for storage images
+    return imageInfo;
 }

@@ -1,4 +1,6 @@
 #include "VulkanContext.h"
+#include "VulkanRT.h"
+
 
 VulkanContext::VulkanContext(SDL_Window* window)
     : window(window)
@@ -8,6 +10,7 @@ VulkanContext::VulkanContext(SDL_Window* window)
     createSurface(window);
     pickPhysicalDevice();
     createLogicalDevice();
+    loadVulkanRTFunctions();
     createDescriptorPool();
     createCommandPool();
 }
@@ -220,7 +223,14 @@ void VulkanContext::createLogicalDevice() {
 
     // Specify the device extensions
     const std::vector<const char*> deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+        VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+        VK_KHR_SPIRV_1_4_EXTENSION_NAME,
+        VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME
     };
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
@@ -229,6 +239,26 @@ void VulkanContext::createLogicalDevice() {
     VkPhysicalDeviceFeatures deviceFeatures{};
     deviceFeatures.samplerAnisotropy = VK_TRUE; // Enable anisotropic filtering
     deviceFeatures.sampleRateShading = VK_TRUE; // Enable sample rate shading
+
+    // Enable buffer device address feature (required for ray tracing)
+    VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures{};
+    bufferDeviceAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+    bufferDeviceAddressFeatures.bufferDeviceAddress = VK_TRUE;
+
+    // Enable ray tracing pipeline features
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR rayTracingPipelineFeatures{};
+    rayTracingPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+    rayTracingPipelineFeatures.rayTracingPipeline = VK_TRUE;
+    rayTracingPipelineFeatures.pNext = &bufferDeviceAddressFeatures;
+
+    // Enable acceleration structure features
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures{};
+    accelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+    accelerationStructureFeatures.accelerationStructure = VK_TRUE;
+    accelerationStructureFeatures.pNext = &rayTracingPipelineFeatures;
+
+    // Chain the features
+    deviceCreateInfo.pNext = &accelerationStructureFeatures;
     deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 
     if (vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device) != VK_SUCCESS) {
@@ -236,6 +266,8 @@ void VulkanContext::createLogicalDevice() {
     }
 
     spdlog::info("Logical device created successfully");
+
+    spdlog::info("Ray tracing function pointers loaded successfully");
 
     // Get the graphics queue handle
     vkGetDeviceQueue(device, graphicsFamily.value(), 0, &graphicsQueue);
@@ -245,13 +277,17 @@ void VulkanContext::createLogicalDevice() {
 void VulkanContext::createDescriptorPool() {
 
     // Descriptor usage counts per type
-    uint32_t totalUBOs = 100;
-    uint32_t totalSamplers = 70;
-    uint32_t maxSets = 50;
+    uint32_t totalUBOs = MAX_FRAMES_IN_FLIGHT;
+    //uint32_t totalSamplers = 70;
+    uint32_t totalAccelerationStructures = MAX_FRAMES_IN_FLIGHT; // One per frame
+    uint32_t totalStorageImages = MAX_FRAMES_IN_FLIGHT;          // One per frame
+    uint32_t maxSets = MAX_FRAMES_IN_FLIGHT;                     // One per frame
 
     std::vector<VkDescriptorPoolSize> poolSizes = {
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, totalUBOs },
-        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, totalSamplers }
+        //{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, totalSamplers }
+        { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, totalAccelerationStructures },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, totalStorageImages },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, totalUBOs }
     };
 
     VkDescriptorPoolCreateInfo poolInfo{};
@@ -282,6 +318,19 @@ void VulkanContext::createCommandPool() {
     spdlog::info("Command pool created successfully");
 }
 
+void VulkanContext::loadVulkanRTFunctions() {
+    // Load ray tracing function pointers
+    vkrt::vkGetBufferDeviceAddressKHR = reinterpret_cast<PFN_vkGetBufferDeviceAddressKHR>(vkGetDeviceProcAddr(device, "vkGetBufferDeviceAddressKHR"));
+    vkrt::vkCreateAccelerationStructureKHR = reinterpret_cast<PFN_vkCreateAccelerationStructureKHR>(vkGetDeviceProcAddr(device, "vkCreateAccelerationStructureKHR"));
+    vkrt::vkDestroyAccelerationStructureKHR = reinterpret_cast<PFN_vkDestroyAccelerationStructureKHR>(vkGetDeviceProcAddr(device, "vkDestroyAccelerationStructureKHR"));
+    vkrt::vkGetAccelerationStructureBuildSizesKHR = reinterpret_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(vkGetDeviceProcAddr(device, "vkGetAccelerationStructureBuildSizesKHR"));
+    vkrt::vkGetAccelerationStructureDeviceAddressKHR = reinterpret_cast<PFN_vkGetAccelerationStructureDeviceAddressKHR>(vkGetDeviceProcAddr(device, "vkGetAccelerationStructureDeviceAddressKHR"));
+    vkrt::vkBuildAccelerationStructuresKHR = reinterpret_cast<PFN_vkBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(device, "vkBuildAccelerationStructuresKHR"));
+    vkrt::vkCmdBuildAccelerationStructuresKHR = reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(device, "vkCmdBuildAccelerationStructuresKHR"));
+    vkrt::vkCmdTraceRaysKHR = reinterpret_cast<PFN_vkCmdTraceRaysKHR>(vkGetDeviceProcAddr(device, "vkCmdTraceRaysKHR"));
+    vkrt::vkGetRayTracingShaderGroupHandlesKHR = reinterpret_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(vkGetDeviceProcAddr(device, "vkGetRayTracingShaderGroupHandlesKHR"));
+    vkrt::vkCreateRayTracingPipelinesKHR = reinterpret_cast<PFN_vkCreateRayTracingPipelinesKHR>(vkGetDeviceProcAddr(device, "vkCreateRayTracingPipelinesKHR"));
+}
 
 bool VulkanContext::isDeviceSuitable(VkPhysicalDevice device, bool fallback) {
     // Check if the device is suitable for our needs (graphics, compute, etc.)

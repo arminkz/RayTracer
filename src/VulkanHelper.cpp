@@ -291,15 +291,15 @@ namespace VulkanHelper {
 
 
     void transitionImageLayout(const std::shared_ptr<VulkanContext>& ctx, 
-                               VkImage image, 
-                               VkImageSubresourceRange subresourceRange,
-                               VkImageLayout oldLayout, 
-                               VkImageLayout newLayout,
-                               VkPipelineStageFlags srcStageMask,
-                               VkPipelineStageFlags dstStageMask)
+        VkCommandBuffer commandBuffer,
+        VkImage image, 
+        VkImageSubresourceRange subresourceRange, 
+        VkImageLayout oldLayout, 
+        VkImageLayout newLayout, 
+        VkPipelineStageFlags srcStageMask, 
+        VkPipelineStageFlags dstStageMask)
     {
-        VkCommandBuffer commandBuffer = beginSingleTimeCommands(ctx);
-    
+
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         barrier.oldLayout = oldLayout;
@@ -308,7 +308,6 @@ namespace VulkanHelper {
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.image = image;
         barrier.subresourceRange = subresourceRange;
-
 
         // Source access mask controls actions that have to be finished on the old layout
 		// before it will be transitioned to the new layout
@@ -357,8 +356,13 @@ namespace VulkanHelper {
                 barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
                 break;
 
+            case VK_IMAGE_LAYOUT_GENERAL:
+                // Image is used for general read/write access
+                barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+                break;
+
             default:
-                spdlog::error("Unsupported old layout transition!");
+                spdlog::error("Unsupported old layout transition: {}", imageLayoutToString(oldLayout));
                 break;            
         }
 
@@ -388,6 +392,21 @@ namespace VulkanHelper {
                 barrier.dstAccessMask = barrier.dstAccessMask | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;;
                 break;
 
+            case VK_IMAGE_LAYOUT_GENERAL:
+                // Image will be used for general read/write access
+                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+                break;
+
+            case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+                // Image will be used for presentation
+                // Make sure any writes to the image have been finished
+                if (barrier.srcAccessMask == 0)
+                {
+                    barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+                }
+                barrier.dstAccessMask = 0;
+                break;
+
             case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 				// Image will be read in a shader (sampler, input attachment)
 				// Make sure any writes to the image have been finished
@@ -399,12 +418,10 @@ namespace VulkanHelper {
 				break;
 
             default:
-                spdlog::error("Unsupported new layout transition!");
+                spdlog::error("Unsupported new layout transition: {}", imageLayoutToString(newLayout));
                 break;            
         }
 
-
-    
         vkCmdPipelineBarrier(
             commandBuffer, 
             srcStageMask, 
@@ -413,7 +430,19 @@ namespace VulkanHelper {
             0, nullptr, 
             0, nullptr, 
             1, &barrier);
-    
+    }
+
+
+    void transitionImageLayout(const std::shared_ptr<VulkanContext>& ctx, 
+        VkImage image, 
+        VkImageSubresourceRange subresourceRange,
+        VkImageLayout oldLayout, 
+        VkImageLayout newLayout,
+        VkPipelineStageFlags srcStageMask,
+        VkPipelineStageFlags dstStageMask)
+    {
+        VkCommandBuffer commandBuffer = beginSingleTimeCommands(ctx);
+        transitionImageLayout(ctx, commandBuffer, image, subresourceRange, oldLayout, newLayout, srcStageMask, dstStageMask);
         endSingleTimeCommands(ctx, commandBuffer);
     }
 
@@ -538,4 +567,23 @@ namespace VulkanHelper {
         }
     }
 
+
+    std::string imageLayoutToString(VkImageLayout layout) {
+        switch (layout) {
+            case VK_IMAGE_LAYOUT_UNDEFINED: return "VK_IMAGE_LAYOUT_UNDEFINED";
+            case VK_IMAGE_LAYOUT_GENERAL: return "VK_IMAGE_LAYOUT_GENERAL";
+            case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL: return "VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL";
+            case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL: return "VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL";
+            case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL: return "VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL";
+            case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL: return "VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL";
+            case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL: return "VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL";
+            case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR: return "VK_IMAGE_LAYOUT_PRESENT_SRC_KHR";
+            default: return "Unknown Layout (" + std::to_string(layout) + ")";
+        }
+    }
+
+
+    uint32_t alignedSize(uint32_t value, uint32_t alignment) {
+        return (value + alignment - 1) & ~(alignment - 1);
+    }
 }
