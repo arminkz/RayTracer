@@ -10,8 +10,9 @@ public:
     DeviceMesh(std::shared_ptr<VulkanContext> ctx, const HostMesh& mesh, const VkTransformMatrixKHR& transform);
     ~DeviceMesh();
 
+    uint32_t getVertexCount() const { return _vertexCount; }
     uint32_t getIndicesCount() const { return _indexCount; }
-    
+
     VkBuffer getVertexBuffer() const { return _vertexBuffer; }
     VkDeviceOrHostAddressConstKHR getVertexBufferDeviceAddress() const { return _vertexBufferDeviceAddress; }
     
@@ -21,6 +22,9 @@ public:
     VkBuffer getTransformBuffer() const { return _transformBuffer; }
     VkDeviceOrHostAddressConstKHR getTransformBufferDeviceAddress() const { return _transformBufferDeviceAddress; }
 
+    VkDescriptorBufferInfo getVertexBufferDescriptorInfo() const;
+    VkDescriptorBufferInfo getIndexBufferDescriptorInfo() const;
+
 private:
     std::shared_ptr<VulkanContext> _ctx;
 
@@ -29,6 +33,7 @@ private:
     VkBuffer _vertexBuffer;
     VkDeviceMemory _vertexBufferMemory;
     VkDeviceOrHostAddressConstKHR _vertexBufferDeviceAddress{};
+    uint32_t _vertexCount;
 
     VkBuffer _indexBuffer;
     VkDeviceMemory _indexBufferMemory;

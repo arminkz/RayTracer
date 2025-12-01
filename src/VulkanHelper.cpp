@@ -586,4 +586,15 @@ namespace VulkanHelper {
     uint32_t alignedSize(uint32_t value, uint32_t alignment) {
         return (value + alignment - 1) & ~(alignment - 1);
     }
+
+    VkFormat convertToUnormFormat(VkFormat format) {
+        switch (format) {
+            case VK_FORMAT_R8G8B8A8_SRGB:
+                return VK_FORMAT_R8G8B8A8_UNORM;
+            case VK_FORMAT_B8G8R8A8_SRGB:
+                return VK_FORMAT_B8G8R8A8_UNORM;
+            default:
+                return format; // Return the original format if no conversion is needed
+        }
+    }
 }

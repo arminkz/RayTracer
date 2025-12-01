@@ -11,12 +11,13 @@ BLAS::~BLAS()
 {
 }
 
-void BLAS::initialize(const DeviceMesh& dmesh) //Should this get a vector of DeviceMesh?
+void BLAS::initialize(const DeviceMesh& dmesh)
 {
-    // Implementation for initializing the BLAS with the provided DeviceMesh
-    
-    // For each mesh or geometry, set up the acceleration structure geometry
-    // Should this be done in DeviceMesh?
+    // Get mesh properties
+    const uint32_t vertexCount = dmesh.getVertexCount();
+    const uint32_t triangleCount = dmesh.getIndicesCount() / 3;
+
+    // Set up the acceleration structure geometry
     VkAccelerationStructureGeometryKHR accelerationStructureGeometry{};
     accelerationStructureGeometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
     accelerationStructureGeometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
@@ -24,7 +25,7 @@ void BLAS::initialize(const DeviceMesh& dmesh) //Should this get a vector of Dev
     accelerationStructureGeometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
     accelerationStructureGeometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
     accelerationStructureGeometry.geometry.triangles.vertexData = dmesh.getVertexBufferDeviceAddress();
-    accelerationStructureGeometry.geometry.triangles.maxVertex = 2;
+    accelerationStructureGeometry.geometry.triangles.maxVertex = vertexCount - 1;
     accelerationStructureGeometry.geometry.triangles.vertexStride = sizeof(Vertex);
     accelerationStructureGeometry.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
     accelerationStructureGeometry.geometry.triangles.indexData = dmesh.getIndexBufferDeviceAddress();
@@ -40,14 +41,13 @@ void BLAS::initialize(const DeviceMesh& dmesh) //Should this get a vector of Dev
     accelerationStructureBuildGeometryInfo.geometryCount = 1;   //Update here if you have more geometries
     accelerationStructureBuildGeometryInfo.pGeometries = &accelerationStructureGeometry;
 
-    const uint32_t numTriangles = 1;
     VkAccelerationStructureBuildSizesInfoKHR accelerationStructureBuildSizesInfo{};
     accelerationStructureBuildSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
     vkrt::vkGetAccelerationStructureBuildSizesKHR(
         _ctx->device,
         VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
         &accelerationStructureBuildGeometryInfo,
-        &numTriangles,
+        &triangleCount,
         &accelerationStructureBuildSizesInfo);
 
     // Create acceleration structure buffer
@@ -99,7 +99,7 @@ void BLAS::initialize(const DeviceMesh& dmesh) //Should this get a vector of Dev
 
     // AS Build range info
     VkAccelerationStructureBuildRangeInfoKHR accelerationStructureBuildRangeInfo{};
-    accelerationStructureBuildRangeInfo.primitiveCount = numTriangles;
+    accelerationStructureBuildRangeInfo.primitiveCount = triangleCount;
     accelerationStructureBuildRangeInfo.primitiveOffset = 0;
     accelerationStructureBuildRangeInfo.firstVertex = 0;
     accelerationStructureBuildRangeInfo.transformOffset = 0;

@@ -90,4 +90,6 @@ namespace VulkanHelper {
     std::string imageLayoutToString(VkImageLayout layout);
 
     uint32_t alignedSize(uint32_t value, uint32_t alignment);
+
+    VkFormat convertToUnormFormat(VkFormat format);
 }

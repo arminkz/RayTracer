@@ -1,6 +1,7 @@
 #include "RayTracingScene.h"
 #include "VulkanHelper.h"
 #include "geometry/HostMesh.h"
+#include "geometry/MeshFactory.h"
 #include "geometry/DeviceMesh.h"
 #include "structure/Buffer.h"
 #include "structure/BLAS.h"
@@ -30,13 +31,15 @@ RayTracingScene::RayTracingScene(std::shared_ptr<VulkanContext> ctx, std::shared
 
 
     // Create Host Mesh consisting of a single triangle
-    HostMesh hmesh;
-    hmesh.vertices = {
-        {{ 0.0f, -0.5f, 0.0f }},
-        {{ 0.5f,  0.5f, 0.0f }},
-        {{-0.5f,  0.5f, 0.0f }}
-    };
-    hmesh.indices = { 0, 1, 2 };
+    // HostMesh hmesh;
+    // hmesh.vertices = {
+    //     {{ 0.0f, -0.5f, 0.0f }},
+    //     {{ 0.5f,  0.5f, 0.0f }},
+    //     {{-0.5f,  0.5f, 0.0f }}
+    // };
+    // hmesh.indices = { 0, 1, 2 };
+
+    HostMesh hmesh = MeshFactory::createSphereMesh(0.5f, 32, 16);
 
     // Create identity transform
     VkTransformMatrixKHR transformMatrix = {
@@ -60,10 +63,12 @@ RayTracingScene::RayTracingScene(std::shared_ptr<VulkanContext> ctx, std::shared
     spdlog::info("TLAS created.");
 
     // Create Storage Image
-    _storageImage = std::make_unique<StorageImage>(_ctx, 
-        _swapChain->getSwapChainExtent().width,                        
+    // use same format as swap chain to avoid RGB/BGR mismatch
+    // cant use SRGB format for storage image, so convert to UNORM
+    _storageImage = std::make_unique<StorageImage>(_ctx,
+        _swapChain->getSwapChainExtent().width,
         _swapChain->getSwapChainExtent().height,
-        VK_FORMAT_R8G8B8A8_UNORM);
+        VulkanHelper::convertToUnormFormat(_swapChain->getSwapChainImageFormat()));
     spdlog::info("Storage image created.");
 
 
@@ -98,7 +103,6 @@ void RayTracingScene::update(uint32_t currentImage) {
     glm::mat4 proj = glm::perspective(glm::radians(45.0f), 
         static_cast<float>(_swapChain->getSwapChainExtent().width) / static_cast<float>(_swapChain->getSwapChainExtent().height), 
         0.1f, 10.0f);
-    proj[1][1] *= -1; // Invert Y for Vulkan
 
     // Update uniform buffer
     _ubo.viewInverse = glm::inverse(view);
@@ -228,13 +232,18 @@ void RayTracingScene::createDescriptorSets() {
     // Create one descriptor set per frame in flight
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         std::vector<Descriptor> descriptors = {
+            // Bare minimum required descriptors for ray tracing
             Descriptor(0, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, VK_SHADER_STAGE_RAYGEN_BIT_KHR, 1, _tlas->getDescriptorInfo()),
             Descriptor(1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_RAYGEN_BIT_KHR, 1, _storageImage->getDescriptorInfo()),
-            Descriptor(2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR, 1, _uniformBuffers[i]->getDescriptorInfo())
+            Descriptor(2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR, 1, _uniformBuffers[i]->getDescriptorInfo()),
+
+            // Mesh vertex and index buffers
+            Descriptor(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 1, _deviceMesh->getVertexBufferDescriptorInfo()),
+            Descriptor(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 1, _deviceMesh->getIndexBufferDescriptorInfo())
         };
         _descriptorSets[i] = std::make_unique<DescriptorSet>(_ctx, descriptors);
     }
-    
+
     spdlog::info("Descriptor sets created successfully.");
 }
 

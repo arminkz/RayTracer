@@ -4,6 +4,7 @@
 DeviceMesh::DeviceMesh(std::shared_ptr<VulkanContext> ctx, const HostMesh& mesh, const VkTransformMatrixKHR& transform)
     : _ctx(std::move(ctx))
 {
+    _vertexCount = static_cast<uint32_t>(mesh.vertices.size());
     _indexCount = static_cast<uint32_t>(mesh.indices.size());
     createVertexBuffer(mesh);
     createIndexBuffer(mesh);
@@ -47,7 +48,10 @@ void DeviceMesh::createVertexBuffer(const HostMesh& mesh)
     // Create the vertex buffer
     VulkanHelper::createBuffer(_ctx,
         bufferSize,
-        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | 
+        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | 
+        //VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | 
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT  | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         true,
         _vertexBuffer, _vertexBufferMemory);
@@ -89,7 +93,10 @@ void DeviceMesh::createIndexBuffer(const HostMesh& mesh)
     // Create the index buffer
     VulkanHelper::createBuffer(_ctx,
         bufferSize,
-        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | 
+        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | 
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT | 
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         true,
         _indexBuffer, _indexBufferMemory);
@@ -130,7 +137,9 @@ void DeviceMesh::createTransformBuffer(const VkTransformMatrixKHR& transform)
     // Create the transform buffer
     VulkanHelper::createBuffer(_ctx,
         bufferSize,
-        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | 
+        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | 
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         true,
         _transformBuffer, _transformBufferMemory);
@@ -144,4 +153,22 @@ void DeviceMesh::createTransformBuffer(const VkTransformMatrixKHR& transform)
 
     // Get the device address of the transform buffer
     _transformBufferDeviceAddress.deviceAddress = VulkanHelper::getBufferDeviceAddress(_ctx, _transformBuffer);
+}
+
+VkDescriptorBufferInfo DeviceMesh::getVertexBufferDescriptorInfo() const
+{
+    VkDescriptorBufferInfo bufferInfo{};
+    bufferInfo.buffer = _vertexBuffer;
+    bufferInfo.offset = 0;
+    bufferInfo.range = VK_WHOLE_SIZE;
+    return bufferInfo;
+}
+
+VkDescriptorBufferInfo DeviceMesh::getIndexBufferDescriptorInfo() const
+{
+    VkDescriptorBufferInfo bufferInfo{};
+    bufferInfo.buffer = _indexBuffer;
+    bufferInfo.offset = 0;
+    bufferInfo.range = VK_WHOLE_SIZE;
+    return bufferInfo;
 }

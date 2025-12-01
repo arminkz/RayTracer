@@ -278,6 +278,7 @@ void VulkanContext::createDescriptorPool() {
 
     // Descriptor usage counts per type
     uint32_t totalUBOs = MAX_FRAMES_IN_FLIGHT;
+    uint32_t totalSSBOs = 10;
     //uint32_t totalSamplers = 70;
     uint32_t totalAccelerationStructures = MAX_FRAMES_IN_FLIGHT; // One per frame
     uint32_t totalStorageImages = MAX_FRAMES_IN_FLIGHT;          // One per frame
@@ -287,7 +288,8 @@ void VulkanContext::createDescriptorPool() {
         //{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, totalSamplers }
         { VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, totalAccelerationStructures },
         { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, totalStorageImages },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, totalUBOs }
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, totalUBOs },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, totalSSBOs }
     };
 
     VkDescriptorPoolCreateInfo poolInfo{};
