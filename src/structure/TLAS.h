@@ -4,7 +4,6 @@
 #include "VulkanContext.h"
 #include "VulkanHelper.h"
 #include "Buffer.h"
-#include "BLAS.h"
 
 
 class TLAS {
@@ -12,7 +11,7 @@ public:
     TLAS(std::shared_ptr<VulkanContext> ctx);
     ~TLAS();
 
-    void initialize(const BLAS& blas);
+    void initialize(const std::vector<VkAccelerationStructureInstanceKHR>& instances);
 
     VkWriteDescriptorSetAccelerationStructureKHR getDescriptorInfo() const;
 

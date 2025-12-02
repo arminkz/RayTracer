@@ -48,5 +48,8 @@
 #include <unordered_set>
 #include <vector>
 
+// [Time]
+using TimePoint = std::chrono::high_resolution_clock::time_point;
+
 // [Global constants]
 const int MAX_FRAMES_IN_FLIGHT = 2;

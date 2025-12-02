@@ -86,10 +86,11 @@ namespace VulkanHelper {
     bool hasStencilComponent(VkFormat format);
 
     std::string formatToString(VkFormat format);
-
     std::string imageLayoutToString(VkImageLayout layout);
 
     uint32_t alignedSize(uint32_t value, uint32_t alignment);
 
     VkFormat convertToUnormFormat(VkFormat format);
+
+    VkTransformMatrixKHR convertToVkTransform(const glm::mat4& mat);
 }

@@ -1,5 +1,4 @@
 #include "TLAS.h"
-#include "BLAS.h"
 #include "Buffer.h"
 #include "VulkanRT.h"
 
@@ -12,30 +11,24 @@ TLAS::~TLAS()
 {
 }
 
-void TLAS::initialize(const BLAS& blas)
+void TLAS::initialize(const std::vector<VkAccelerationStructureInstanceKHR>& instances)
 {
-    // TLAS initialization code goes here
-    VkTransformMatrixKHR transformMatrix = {
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f };
+    if (instances.empty()) {
+        spdlog::error("TLAS::initialize called with empty instances vector!");
+        throw std::runtime_error("Cannot create TLAS with zero instances");
+    }
 
-    VkAccelerationStructureInstanceKHR instance{};
-    instance.transform = transformMatrix;
-    instance.instanceCustomIndex = 0;
-    instance.mask = 0xFF;
-    instance.instanceShaderBindingTableRecordOffset = 0;
-    instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-    instance.accelerationStructureReference = blas.getDeviceAddress();
+    const uint32_t instanceCount = static_cast<uint32_t>(instances.size());
+    const VkDeviceSize instancesBufferSize = sizeof(VkAccelerationStructureInstanceKHR) * instanceCount;
 
     // Buffer for instance data
     Buffer instancesBuffer(_ctx);
     instancesBuffer.initialize(
-        sizeof(VkAccelerationStructureInstanceKHR),
+        instancesBufferSize,
         VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         true);
-    instancesBuffer.copyData(&instance, sizeof(VkAccelerationStructureInstanceKHR));
+    instancesBuffer.copyData(instances.data(), instancesBufferSize);
 
     // Get device address of the instance buffer
     VkDeviceOrHostAddressConstKHR instanceDataDeviceAddress{};
@@ -62,7 +55,7 @@ void TLAS::initialize(const BLAS& blas)
     accelerationStructureBuildGeometryInfo.geometryCount = 1;
     accelerationStructureBuildGeometryInfo.pGeometries = &accelerationStructureGeometry;
 
-    uint32_t primitive_count = 1;
+    uint32_t primitive_count = instanceCount;
 
     VkAccelerationStructureBuildSizesInfoKHR accelerationStructureBuildSizesInfo{};
     accelerationStructureBuildSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
@@ -120,7 +113,7 @@ void TLAS::initialize(const BLAS& blas)
     accelerationBuildGeometryInfo.scratchData.deviceAddress = scratchBuffer.getDeviceAddress();
 
     VkAccelerationStructureBuildRangeInfoKHR accelerationStructureBuildRangeInfo{};
-    accelerationStructureBuildRangeInfo.primitiveCount = 1;
+    accelerationStructureBuildRangeInfo.primitiveCount = instanceCount;
     accelerationStructureBuildRangeInfo.primitiveOffset = 0;
     accelerationStructureBuildRangeInfo.firstVertex = 0;
     accelerationStructureBuildRangeInfo.transformOffset = 0;
@@ -143,6 +136,8 @@ void TLAS::initialize(const BLAS& blas)
 
     scratchBuffer.destroy();
     instancesBuffer.destroy();
+
+    spdlog::info("Top Level Acceleration Structure created with {} instances.", instanceCount);
 }
 
 

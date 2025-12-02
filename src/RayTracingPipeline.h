@@ -15,8 +15,8 @@ struct RayTracingPipelineParams {
 class RayTracingPipeline {
 public:
     RayTracingPipeline(std::shared_ptr<VulkanContext> ctx,
-        const std::string& raygenShaderPath, 
-        const std::string& missShaderPath, 
+        const std::string& raygenShaderPath,
+        const std::vector<std::string>& missShaderPaths,
         const std::string& closestHitShaderPath,
         const RayTracingPipelineParams& params
     );
@@ -37,8 +37,8 @@ private:
 
     void createPipelineLayout(const RayTracingPipelineParams& params);
     void createRayTracingPipeline(
-        const std::string& raygenShaderPath, 
-        const std::string& missShaderPath, 
+        const std::string& raygenShaderPath,
+        const std::vector<std::string>& missShaderPaths,
         const std::string& closestHitShaderPath,
         const RayTracingPipelineParams& params
     );

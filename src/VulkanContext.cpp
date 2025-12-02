@@ -239,6 +239,7 @@ void VulkanContext::createLogicalDevice() {
     VkPhysicalDeviceFeatures deviceFeatures{};
     deviceFeatures.samplerAnisotropy = VK_TRUE; // Enable anisotropic filtering
     deviceFeatures.sampleRateShading = VK_TRUE; // Enable sample rate shading
+    deviceFeatures.shaderInt64 = VK_TRUE;       // Enable 64-bit integer support in shaders
 
     // Enable buffer device address feature (required for ray tracing)
     VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures{};

@@ -29,13 +29,6 @@ private:
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR _rayTracingPipelineProperties{};
     VkPhysicalDeviceAccelerationStructureFeaturesKHR _accelerationStructureFeatures{};
 
-    // Device Mesh
-    std::shared_ptr<DeviceMesh> _deviceMesh;
-
-    // Acceleration Structures
-    std::unique_ptr<BLAS> _blas;
-    std::unique_ptr<TLAS> _tlas;
-
     // Storage Image
     std::unique_ptr<StorageImage> _storageImage;
 
@@ -43,6 +36,8 @@ private:
     struct UniformData {
 		glm::mat4 viewInverse;
 		glm::mat4 projInverse;
+        glm::vec3 camPosition; float pad0;
+        glm::vec3 lightPosition; float pad1;
 	} _ubo;
     std::array<std::unique_ptr<Buffer>, MAX_FRAMES_IN_FLIGHT> _uniformBuffers;
     void createUniformBuffers();
@@ -60,4 +55,40 @@ private:
     std::unique_ptr<Buffer> missShaderBindingTable;
     std::unique_ptr<Buffer> hitShaderBindingTable;
     void createShaderBindingTables();
+
+    // Super Sampling Anti-Aliasing (SSAA)
+    const uint32_t _supersampleScale = 2;
+
+    // Time
+    float _time = 0.0f;
+    bool _isPaused = false;
+    TimePoint _lastFrameTime = std::chrono::high_resolution_clock::now();
+
+    // Geometry templates
+    struct GeometryTemplate {
+        std::unique_ptr<DeviceMesh> dmesh;
+        std::unique_ptr<BLAS> blas;
+    };
+    std::unordered_map<std::string, GeometryTemplate> _geometryTemplates;
+    void createGeometryTemplates();
+
+    // Scene Objects
+    struct SceneObject {
+        std::string geometryType;
+        glm::mat4 transform;
+        glm::vec3 color;
+        int materialType = 0; // 0 = normal, 999= checkerboard
+
+        // Additional material properties can be added here
+    };
+    std::vector<SceneObject> _sceneObjects;
+    void createSceneObjects();
+
+    // Top Level Acceleration Structure (TLAS)
+    std::unique_ptr<TLAS> _tlas;
+    void createTLAS();
+
+    // Instance Data Buffer
+    std::unique_ptr<Buffer> _instanceDataBuffer;
+    void createInstanceDataBuffer();
 };

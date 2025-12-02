@@ -50,7 +50,7 @@ void Buffer::destroy()
 void Buffer::copyData(const void* data, VkDeviceSize size, VkDeviceSize offset)
 {
     if (_mappedMemory) {
-        memcpy(static_cast<int32_t*>(_mappedMemory) + offset, data, size);
+        memcpy(static_cast<char*>(_mappedMemory) + offset, data, size);
     } else {
         throw std::runtime_error("Buffer is not mapped!");
     }

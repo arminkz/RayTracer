@@ -587,6 +587,7 @@ namespace VulkanHelper {
         return (value + alignment - 1) & ~(alignment - 1);
     }
 
+
     VkFormat convertToUnormFormat(VkFormat format) {
         switch (format) {
             case VK_FORMAT_R8G8B8A8_SRGB:
@@ -596,5 +597,16 @@ namespace VulkanHelper {
             default:
                 return format; // Return the original format if no conversion is needed
         }
+    }
+
+    
+    VkTransformMatrixKHR convertToVkTransform(const glm::mat4& mat) {
+        VkTransformMatrixKHR transform{};
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                transform.matrix[i][j] = mat[j][i]; // Note the transpose
+            }
+        }
+        return transform;
     }
 }
