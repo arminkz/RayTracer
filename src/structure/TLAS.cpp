@@ -90,7 +90,8 @@ void TLAS::initialize(const std::vector<VkAccelerationStructureInstanceKHR>& ins
     accelerationStructureCreateInfo.buffer = _asBuffer.getBuffer();
     accelerationStructureCreateInfo.size = accelerationStructureBuildSizesInfo.accelerationStructureSize;
     accelerationStructureCreateInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-    accelerationStructureCreateInfo.createFlags = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
+    // Note: createFlags should be 0. The ALLOW_UPDATE flag is a build flag, not a create flag
+    // It's already set correctly in accelerationBuildGeometryInfo.flags below
     vkrt::vkCreateAccelerationStructureKHR(_ctx->device, &accelerationStructureCreateInfo, nullptr, &_handle);
 
     // Create a small scratch buffer used during build of the top level acceleration structure

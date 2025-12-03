@@ -89,14 +89,14 @@ void RayTracingScene::update(uint32_t currentImage) {
     _lastFrameTime = std::chrono::high_resolution_clock::now();
 
     // Camera matrices
-    glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 15.0f, 15.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     glm::mat4 proj = glm::perspective(glm::radians(45.0f), 
         static_cast<float>(_swapChain->getSwapChainExtent().width) / static_cast<float>(_swapChain->getSwapChainExtent().height), 
         0.1f, 10.0f);
     proj[1][1] *= -1; // Invert Y for Vulkan
 
     // Rotate light around the scene
-    float r = 10.0f;
+    float r = 15.0f;
     _ubo.lightPosition = glm::vec3(r * cos(_time*0.5), r, r * sin(_time*0.5));
     glm::vec3 lightDir = glm::normalize(-_ubo.lightPosition); // direction from point to light
     glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -113,7 +113,7 @@ void RayTracingScene::update(uint32_t currentImage) {
     // Update uniform buffer
     _ubo.viewInverse = glm::inverse(view);
     _ubo.projInverse = glm::inverse(proj);
-    _ubo.camPosition = glm::vec3(0.0f, 15.0f, 15.0f);
+    _ubo.camPosition = glm::vec3(0.0f, 10.0f, 10.0f);
     
     // Copy data to uniform buffer
     _uniformBuffers[currentImage]->copyData(&_ubo, sizeof(UniformData));
