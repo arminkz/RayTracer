@@ -41,6 +41,8 @@ layout(binding = 2, set = 0) uniform SceneUBO
 	mat4 projInverse;
 	vec3 camPosition; float pad0;
 	vec3 lightPosition; float pad1;
+    vec3 lightU; float pad2;
+    vec3 lightV; float pad3;
 } scene;
 
 // Instance data buffer
@@ -55,6 +57,15 @@ hitAttributeEXT vec2 attribs;
 
 // Acceleration structure for shadow ray tracing
 layout(binding = 0, set = 0) uniform accelerationStructureEXT TLAS;
+
+
+
+float randomFloat(inout uint state) {
+    state = state * 747796405u + 2891336453u;
+    uint result = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    result = (result >> 22u) ^ result;
+    return float(result) / 4294967295.0;
+}
 
 
 void main()
@@ -97,35 +108,101 @@ void main()
     vec3 worldPosition = vec3(gl_ObjectToWorldEXT * vec4(position, 1.0));
     vec3 worldNormal = normalize(mat3(gl_ObjectToWorldEXT) * normal);
 
-    vec3 L = normalize(scene.lightPosition - worldPosition); // Light direction
-    vec3 V = normalize(scene.camPosition - worldPosition);   // View direction
-    vec3 R = reflect(-L, worldNormal);                       // Reflection direction
+    // Check if this is an emissive material (light source)
+    if (instanceData.materialType == 1) {
+        // Return bright emissive color (no lighting calculation needed)
+        hitValue = instanceData.color; // Bright emission
+        return;
+    }
 
-    // Cast shadow ray toward the light
-    float tmin = 0.005; // Small offset to avoid self-intersection
-    float tmax = length(scene.lightPosition - worldPosition); // Distance to light
-    shadowPayload = 0.0; // Assume occluded
+    // Random number generator
+    uint rngState = gl_LaunchIDEXT.x 
+              ^ (gl_LaunchIDEXT.y << 8)
+              ^ (gl_LaunchIDEXT.z << 16)
+              ^ (gl_PrimitiveID * 9781u)
+              ^ 0x68bc21ebu;
 
-    traceRayEXT(
-        TLAS,                                     // Acceleration structure
-        gl_RayFlagsOpaqueEXT |
-        gl_RayFlagsTerminateOnFirstHitEXT |       // Stop at first hit (we only care if blocked)
-        gl_RayFlagsSkipClosestHitShaderEXT,       // Don't need closest hit for shadows
-        0xFF,                                     // Cull mask
-        0,                                        // SBT record offset
-        1,                                        // SBT record stride
-        1,                                        // Miss shader index (shadow miss shader)
-        worldPosition + worldNormal * 0.005 ,      // Ray origin (slightly offset along normal)
-        tmin,                                     // Min distance
-        L,                                        // Ray direction (toward light)
-        tmax,                                     // Max distance
-        1                                         // Payload location
-    );
+    // Grid-based stratified sampling for soft shadows
+    const uint numSamples = 16; // 4x4 grid
+    const uint gridSize = 4;    // sqrt(numSamples)
+    float shadowSum = 0.0;
+    float tmin = 0.001;
 
-    // Apply lighting: ambient always present, diffuse/specular only if not in shadow
-    float diff = 0.65 * max(dot(worldNormal, L), 0.0);
+    float angle = randomFloat(rngState) * 6.28318530718; // random rotation
+    float ca = cos(angle);
+    float sa = sin(angle);
+
+    for (uint i = 0; i < numSamples; i++) {
+        // Calculate grid cell coordinates
+        uint gridX = i % gridSize;
+        uint gridY = i / gridSize;
+
+        // Stratified sampling: divide light into grid, sample within each cell
+        float cellSizeU = 1.0 / float(gridSize);
+        float cellSizeV = 1.0 / float(gridSize);
+
+        // Base position in grid cell
+        float u = (float(gridX) + 0.5) * cellSizeU;
+        float v = (float(gridY) + 0.5) * cellSizeV;
+
+        // Optional: Add jitter within the cell for better quality
+        u += (randomFloat(rngState) - 0.5) * cellSizeU;
+        v += (randomFloat(rngState) - 0.5) * cellSizeV;
+
+        // Convert to [-0.5, 0.5] range for centered sampling
+        u = u - 0.5;
+        v = v - 0.5;
+
+        // u = clamp(u, -0.49, 0.49);
+        // v = clamp(v, -0.49, 0.49);
+
+        // float uu = ca * u - sa * v;
+        // float vv = sa * u + ca * v;
+
+        // Calculate point on area light
+        vec3 lightSamplePos = scene.lightPosition + u * scene.lightU + v * scene.lightV;
+
+        // Direction and distance to this light sample
+        vec3 L = lightSamplePos - worldPosition;
+        float lightDistance = length(L);
+        L = normalize(L);
+
+        if (dot(L, worldNormal) <= 0.0) {
+            shadowSum += 1.0; // Light is behind → treat as fully lit for shadow only
+            continue;
+        }
+
+        // Cast shadow ray
+        shadowPayload = 0.0;
+        traceRayEXT(
+            TLAS,
+            gl_RayFlagsTerminateOnFirstHitEXT |
+            gl_RayFlagsSkipClosestHitShaderEXT,
+            0xFF,
+            0,
+            1,
+            1,
+            worldPosition + worldNormal * 0.001,
+            tmin,
+            L,
+            lightDistance,
+            1
+        );
+
+        shadowSum += shadowPayload;
+    }
+
+    // Average shadow factor across all samples
+    float shadowFactor = shadowSum / float(numSamples);
+
+    // Calculate lighting to center of area light for diffuse/specular
+    vec3 L = normalize(scene.lightPosition - worldPosition);
+    vec3 V = normalize(scene.camPosition - worldPosition);
+    vec3 R = reflect(-L, worldNormal);
+
+    float diff = max(dot(worldNormal, L), 0.0);
     float spec = 0.3 * pow(max(dot(R, V), 0.0), 8.0);
-    float amb = 0.05;
+    float amb = 0.1;
 
     vec3 baseColor = instanceData.color;
 
@@ -136,7 +213,8 @@ void main()
         baseColor = mix(vec3(0.5), vec3(1.0), checker);
     }
 
-    // shadowPayload is 1.0 if light is visible, 0.0 if occluded
-    // Final shading with instance color
-    hitValue = (amb + shadowPayload * (diff + spec)) * baseColor;
+    // Apply soft shadows
+    hitValue = (amb + shadowFactor * (diff + spec)) * baseColor;
+
+    //hitValue = baseColor * shadowFactor;
 }

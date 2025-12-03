@@ -38,6 +38,8 @@ private:
 		glm::mat4 projInverse;
         glm::vec3 camPosition; float pad0;
         glm::vec3 lightPosition; float pad1;
+        glm::vec3 lightU; float pad2;
+        glm::vec3 lightV; float pad3;
 	} _ubo;
     std::array<std::unique_ptr<Buffer>, MAX_FRAMES_IN_FLIGHT> _uniformBuffers;
     void createUniformBuffers();
@@ -77,7 +79,7 @@ private:
         std::string geometryType;
         glm::mat4 transform;
         glm::vec3 color;
-        int materialType = 0; // 0 = normal, 999= checkerboard
+        int materialType = 0; // 0 = normal, 1=Emissive, 999= checkerboard
 
         // Additional material properties can be added here
     };
@@ -87,8 +89,12 @@ private:
     // Top Level Acceleration Structure (TLAS)
     std::unique_ptr<TLAS> _tlas;
     void createTLAS();
+    void updateTLAS();
 
     // Instance Data Buffer
     std::unique_ptr<Buffer> _instanceDataBuffer;
     void createInstanceDataBuffer();
+
+    // Light source sphere index (for dynamic updates)
+    size_t _lightSphereIndex = 0;
 };

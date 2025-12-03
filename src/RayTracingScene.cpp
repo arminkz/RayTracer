@@ -89,19 +89,31 @@ void RayTracingScene::update(uint32_t currentImage) {
     _lastFrameTime = std::chrono::high_resolution_clock::now();
 
     // Camera matrices
-    glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 15.0f, 15.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     glm::mat4 proj = glm::perspective(glm::radians(45.0f), 
         static_cast<float>(_swapChain->getSwapChainExtent().width) / static_cast<float>(_swapChain->getSwapChainExtent().height), 
         0.1f, 10.0f);
     proj[1][1] *= -1; // Invert Y for Vulkan
 
     // Rotate light around the scene
-    _ubo.lightPosition = glm::vec3(20.0f * cos(_time*0.2), 20.0f, 20.0f * sin(_time*0.2));
+    float r = 10.0f;
+    _ubo.lightPosition = glm::vec3(r * cos(_time*0.5), r, r * sin(_time*0.5));
+    glm::vec3 lightDir = glm::normalize(-_ubo.lightPosition); // direction from point to light
+    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+    if (glm::abs(glm::dot(lightDir, up)) > 0.999f)
+        up = glm::vec3(1.0f, 0.0f, 0.0f);
+    _ubo.lightU = glm::normalize(glm::cross(up, lightDir));
+    _ubo.lightV = glm::normalize(glm::cross(lightDir, _ubo.lightU));
+
+    //Update light sphere position and TLAS
+    _sceneObjects[_lightSphereIndex].transform = glm::translate(glm::mat4(1.0f), _ubo.lightPosition);
+    _sceneObjects[_lightSphereIndex].transform = glm::scale(_sceneObjects[_lightSphereIndex].transform, glm::vec3(0.5f));
+    updateTLAS();
 
     // Update uniform buffer
     _ubo.viewInverse = glm::inverse(view);
     _ubo.projInverse = glm::inverse(proj);
-    _ubo.camPosition = glm::vec3(0.0f, 10.0f, 10.0f);
+    _ubo.camPosition = glm::vec3(0.0f, 15.0f, 15.0f);
     
     // Copy data to uniform buffer
     _uniformBuffers[currentImage]->copyData(&_ubo, sizeof(UniformData));
@@ -330,6 +342,18 @@ void RayTracingScene::createSceneObjects() {
         _sceneObjects.push_back(obj);
     }
 
+    // Add a light source visualization sphere
+    {
+        _lightSphereIndex = _sceneObjects.size(); // Store the index
+        SceneObject obj;
+        obj.geometryType = "sphere";
+        obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(20.0f, 20.0f, 0.0f));
+        obj.transform = glm::scale(obj.transform, glm::vec3(0.5f)); // Small sphere
+        obj.materialType = 1; // Emissive material
+        obj.color = glm::vec3(1.0f, 1.0f, 0.8f); // Warm white light color
+        _sceneObjects.push_back(obj);
+    }
+
     //Objects placed in a grid fashion
     // Create a box
     {
@@ -449,6 +473,27 @@ void RayTracingScene::createTLAS() {
     }
 
     _tlas->initialize(instances);
+}
+
+void RayTracingScene::updateTLAS() {
+    std::vector<VkAccelerationStructureInstanceKHR> instances;
+
+    for (size_t i = 0; i < _sceneObjects.size(); i++) {
+        const auto& obj = _sceneObjects[i];
+        const auto& geom = _geometryTemplates[obj.geometryType];
+
+        VkAccelerationStructureInstanceKHR instance{};
+        instance.transform = VulkanHelper::convertToVkTransform(obj.transform);
+        instance.instanceCustomIndex = i; // Unique ID per object instance
+        instance.mask = 0xFF;
+        instance.instanceShaderBindingTableRecordOffset = 0;
+        instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+        instance.accelerationStructureReference = geom.blas->getDeviceAddress();
+
+        instances.push_back(instance);
+    }
+
+    _tlas->update(instances);
 }
 
 

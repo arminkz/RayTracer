@@ -12,6 +12,7 @@ public:
     ~TLAS();
 
     void initialize(const std::vector<VkAccelerationStructureInstanceKHR>& instances);
+    void update(const std::vector<VkAccelerationStructureInstanceKHR>& instances);
 
     VkWriteDescriptorSetAccelerationStructureKHR getDescriptorInfo() const;
 
