@@ -9,6 +9,7 @@
 #include "structure/StorageImage.h"
 #include "RayTracingPipeline.h"
 #include "DescriptorSet.h"
+#include "TurnTableCamera.h"
 
 
 class RayTracingScene : public Scene
@@ -19,6 +20,10 @@ public:
 
     void update(uint32_t currentImage) override;
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t targetSwapImageIndex) override;
+
+    void handleMouseClick(float mx, float my) override;
+    void handleMouseDrag(float dx, float dy) override;
+    void handleMouseWheel(float dy) override;
 
 private:
 
@@ -60,6 +65,9 @@ private:
 
     // Super Sampling Anti-Aliasing (SSAA)
     const uint32_t _supersampleScale = 2;
+
+    // Camera
+    std::unique_ptr<TurnTableCamera> _camera;
 
     // Time
     float _time = 0.0f;

@@ -14,6 +14,10 @@ public:
     void initialize();
     void drawFrame();
 
+    void handleMouseClick(float mx, float my) { _scene->handleMouseClick(mx, my); }
+    void handleMouseDrag(float dx, float dy) { _scene->handleMouseDrag(dx, dy); }
+    void handleMouseWheel(float dy) { _scene->handleMouseWheel(dy); }
+
 private:
     std::shared_ptr<VulkanContext> _ctx;
 

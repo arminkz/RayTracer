@@ -15,6 +15,11 @@ public:
     // Child classes should implement this method to create their own scene
     virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) = 0;
 
+    // IO handling
+    virtual void handleMouseClick(float mx, float my) = 0;
+    virtual void handleMouseDrag(float dx, float dy) = 0;
+    virtual void handleMouseWheel(float dy) = 0;
+
 protected:
     std::shared_ptr<VulkanContext> _ctx;
     std::shared_ptr<SwapChain> _swapChain;

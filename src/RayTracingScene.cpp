@@ -47,6 +47,11 @@ RayTracingScene::RayTracingScene(std::shared_ptr<VulkanContext> ctx, std::shared
     createUniformBuffers();
     spdlog::info("Uniform buffers created.");
 
+    // Create Camera
+    TurnTableCameraParams cameraParams;
+    cameraParams.initialElevation = -0.6f;
+    _camera = std::make_unique<TurnTableCamera>(cameraParams);
+
     // Create Geometry Templates
     createGeometryTemplates();
 
@@ -89,7 +94,7 @@ void RayTracingScene::update(uint32_t currentImage) {
     _lastFrameTime = std::chrono::high_resolution_clock::now();
 
     // Camera matrices
-    glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 10.0f, 10.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 view = _camera->getViewMatrix();
     glm::mat4 proj = glm::perspective(glm::radians(45.0f), 
         static_cast<float>(_swapChain->getSwapChainExtent().width) / static_cast<float>(_swapChain->getSwapChainExtent().height), 
         0.1f, 10.0f);
@@ -640,4 +645,19 @@ void RayTracingScene::createShaderBindingTables() {
     hitShaderBindingTable->copyData(shaderHandleStorage.data() + 3*handleSizeAligned, handleSize);
 
     spdlog::info("Shader binding tables created successfully 1 raygen, {} miss shaders, 1 hit shader", missShaderCount);
+}
+
+void RayTracingScene::handleMouseClick(float mx, float my) {
+    return;
+}
+
+void RayTracingScene::handleMouseDrag(float dx, float dy) {
+    // Update camera based on mouse drag
+    _camera->rotateHorizontally(static_cast<float>(-dx) * 0.005f);
+    _camera->rotateVertically(static_cast<float>(-dy) * 0.005f);
+}
+
+void RayTracingScene::handleMouseWheel(float dy) {
+    // Zoom camera based on scroll
+    _camera->changeZoom(static_cast<float>(dy) * 0.3f);
 }

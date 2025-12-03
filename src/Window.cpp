@@ -153,7 +153,7 @@ void Window::onMouseMotion(float x, float y)
         int deltaX = x - _lastMouseX;
         int deltaY = y - _lastMouseY;
 
-        //_renderer->handleMouseDrag(deltaX, deltaY);
+        _renderer->handleMouseDrag(deltaX, deltaY);
     }
 
     _lastMouseX = x;
@@ -166,7 +166,7 @@ void Window::onMouseButtonDown(int button, float x, float y)
     if (button == SDL_BUTTON_LEFT) {
         _isMouseDown = true;
 
-        //_renderer->handleMouseClick(x, y); // Call the renderer's mouse click handler
+        _renderer->handleMouseClick(x, y); // Call the renderer's mouse click handler
     }
 }
 
@@ -181,7 +181,7 @@ void Window::onMouseButtonUp(int button, float x, float y)
 void Window::onMouseWheel(float x, float y)
 {
     // Handle mouse wheel event
-    //_renderer->handleMouseWheel(y);
+    _renderer->handleMouseWheel(y);
 }
 
 void Window::onKeyDown(int key, int scancode, int modifiers)
