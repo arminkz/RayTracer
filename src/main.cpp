@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
     //Create a window
     try{
         Window window;
-        if (!window.initialize("Vulkan RayTracer v0.1 (by @arminkz)", 1280, 720)) return EXIT_FAILURE;
+        if (!window.initialize("Vulkan RayTracer v0.1 (by @arminkz)", 1920, 1080)) return EXIT_FAILURE;
 
         // Start the rendering loop
         window.startRenderingLoop();

@@ -33,7 +33,7 @@ else
 fi
 
 # Find all shader files
-find "$SHADER_FOLDER_FULL" -type f \( -name "*.rchit" -o -name "*.rgen" -o -name "*.rmiss" \) | while read -r INPUT_FILE; do
+find "$SHADER_FOLDER_FULL" -type f \( -name "*.rchit" -o -name "*.rgen" -o -name "*.rmiss" -o -name "*.rahit" \) | while read -r INPUT_FILE; do
     # Get relative path
     RELATIVE_PATH="${INPUT_FILE#$SHADER_FOLDER_FULL/}"
     RELATIVE_DIR=$(dirname "$RELATIVE_PATH")

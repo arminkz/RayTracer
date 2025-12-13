@@ -187,8 +187,5 @@ void Window::onMouseWheel(float x, float y)
 void Window::onKeyDown(int key, int scancode, int modifiers)
 {
     // Handle key down event
-    //_renderer->handleKeyDown(key, scancode, modifiers);
-    // if (key == SDLK_A) {
-    //     spdlog::info("Key A pressed");
-    // }
+    _renderer->handleKeyDown(key, scancode, modifiers);
 }

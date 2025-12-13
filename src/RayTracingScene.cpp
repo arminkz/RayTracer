@@ -93,16 +93,22 @@ void RayTracingScene::update(uint32_t currentImage) {
     }
     _lastFrameTime = std::chrono::high_resolution_clock::now();
 
+    // Camera orbiting
+    if(_cameraOrbiting) {
+        _camera->rotateHorizontally(0.01f);
+    }
+
     // Camera matrices
     glm::mat4 view = _camera->getViewMatrix();
     glm::mat4 proj = glm::perspective(glm::radians(45.0f), 
         static_cast<float>(_swapChain->getSwapChainExtent().width) / static_cast<float>(_swapChain->getSwapChainExtent().height), 
         0.1f, 10.0f);
     proj[1][1] *= -1; // Invert Y for Vulkan
+    
 
     // Rotate light around the scene
-    float r = 15.0f;
-    _ubo.lightPosition = glm::vec3(r * cos(_time*0.5), r, r * sin(_time*0.5));
+    float r = 25.0f;
+    _ubo.lightPosition = glm::vec3(r * glm::radians(60.f), 1.3f * r, r * sin(glm::radians(60.f)));
     glm::vec3 lightDir = glm::normalize(-_ubo.lightPosition); // direction from point to light
     glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
     if (glm::abs(glm::dot(lightDir, up)) > 0.999f)
@@ -111,14 +117,14 @@ void RayTracingScene::update(uint32_t currentImage) {
     _ubo.lightV = glm::normalize(glm::cross(lightDir, _ubo.lightU));
 
     //Update light sphere position and TLAS
-    _sceneObjects[_lightSphereIndex].transform = glm::translate(glm::mat4(1.0f), _ubo.lightPosition);
-    _sceneObjects[_lightSphereIndex].transform = glm::scale(_sceneObjects[_lightSphereIndex].transform, glm::vec3(0.5f));
+    // _sceneObjects[_lightSphereIndex].transform = glm::translate(glm::mat4(1.0f), _ubo.lightPosition);
+    // _sceneObjects[_lightSphereIndex].transform = glm::scale(_sceneObjects[_lightSphereIndex].transform, glm::vec3(0.5f));
     updateTLAS();
 
     // Update uniform buffer
     _ubo.viewInverse = glm::inverse(view);
     _ubo.projInverse = glm::inverse(proj);
-    _ubo.camPosition = glm::vec3(0.0f, 10.0f, 10.0f);
+    _ubo.camPosition = _camera->getPosition();
     
     // Copy data to uniform buffer
     _uniformBuffers[currentImage]->copyData(&_ubo, sizeof(UniformData));
@@ -264,7 +270,7 @@ void RayTracingScene::createGeometryTemplates() {
     _geometryTemplates["plane"].blas->initialize(*_geometryTemplates["plane"].dmesh);
 
     // Sphere
-    HostMesh sphereMesh = MeshFactory::createSphereMesh(0.5f, 32, 16);
+    HostMesh sphereMesh = MeshFactory::createSphereMesh(0.5f, 64, 32);
     _geometryTemplates["sphere"].dmesh = std::make_unique<DeviceMesh>(_ctx, sphereMesh, identityTransform);
     _geometryTemplates["sphere"].blas = std::make_unique<BLAS>(_ctx);
     _geometryTemplates["sphere"].blas->initialize(*_geometryTemplates["sphere"].dmesh);
@@ -282,7 +288,7 @@ void RayTracingScene::createGeometryTemplates() {
     _geometryTemplates["pyramid"].blas->initialize(*_geometryTemplates["pyramid"].dmesh);
 
     // Doughnut
-    HostMesh doughnutMesh = MeshFactory::createDoughnutMesh(0.35f, 0.5f, 32, 16);
+    HostMesh doughnutMesh = MeshFactory::createDoughnutMesh(0.35f, 0.5f, 64, 32);
     _geometryTemplates["doughnut"].dmesh = std::make_unique<DeviceMesh>(_ctx, doughnutMesh, identityTransform);
     _geometryTemplates["doughnut"].blas = std::make_unique<BLAS>(_ctx);
     _geometryTemplates["doughnut"].blas->initialize(*_geometryTemplates["doughnut"].dmesh);
@@ -344,112 +350,277 @@ void RayTracingScene::createSceneObjects() {
         obj.transform = glm::mat4(1.0f); // Identity transform
         obj.materialType = 999;          // Checkerboard material
         obj.color = glm::vec3(0.8f, 0.8f, 0.8f); // Light gray
+        obj.metallic = 0.0;
+        obj.roughness = 0.8;
+        obj.transparency = 0.0;
         _sceneObjects.push_back(obj);
     }
 
     // Add a light source visualization sphere
-    {
-        _lightSphereIndex = _sceneObjects.size(); // Store the index
-        SceneObject obj;
-        obj.geometryType = "sphere";
-        obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(20.0f, 20.0f, 0.0f));
-        obj.transform = glm::scale(obj.transform, glm::vec3(0.5f)); // Small sphere
-        obj.materialType = 1; // Emissive material
-        obj.color = glm::vec3(1.0f, 1.0f, 0.8f); // Warm white light color
-        _sceneObjects.push_back(obj);
-    }
+    // {
+    //     _lightSphereIndex = _sceneObjects.size(); // Store the index
+    //     SceneObject obj;
+    //     obj.geometryType = "sphere";
+    //     obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(20.0f, 20.0f, 0.0f));
+    //     obj.transform = glm::scale(obj.transform, glm::vec3(0.5f)); // Small sphere
+    //     obj.materialType = 1; // Emissive material
+    //     obj.color = glm::vec3(1.0f, 1.0f, 0.8f); // Warm white light color
+    //     _sceneObjects.push_back(obj);
+    // }
 
     //Objects placed in a grid fashion
     // Create a box
-    {
-        SceneObject obj;
-        obj.geometryType = "box";
-        obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(-3.0f, 0.5f, 3.0f));
-        obj.color = glm::vec3(0.7f, 0.3f, 0.2f); // Brownish
-        _sceneObjects.push_back(obj);
-    }
+    // {
+    //     SceneObject obj;
+    //     obj.geometryType = "box";
+    //     obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(-3.0f, 0.5f, 3.0f));
+    //     obj.color = glm::vec3(0.7f, 0.3f, 0.2f); // Brownish
+    //     obj.metallic = 0.0;
+    //     obj.roughness = 0.8;
+    //     _sceneObjects.push_back(obj);
+    // }
 
-    // Create a Sphere
+    // Create a reflective metallic sphere (center)
+    // {
+    //     SceneObject obj;
+    //     obj.geometryType = "sphere";
+    //     obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(-5.0f, 2.5f, 0.0f));
+    //     obj.transform = glm::scale(obj.transform, glm::vec3(5.0f)); // Scale up
+    //     obj.color = glm::vec3(1.0f, 0.766f, 0.336f); // Gold
+    //     obj.metallic = 1.0;
+    //     obj.roughness = 0.2;
+    //     obj.transparency = 0.0;  // Opaque
+    //     _sceneObjects.push_back(obj);
+    // }
+
+
+    // Plastic Cylinder
     {
         SceneObject obj;
         obj.geometryType = "sphere";
-        obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(-3.0f, 0.6f, 0.0f));
-        obj.transform = glm::scale(obj.transform, glm::vec3(1.2f)); // Scale up
-        obj.color = glm::vec3(0.2f, 0.3f, 0.7f); // Bluish
+        obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.01f, 0.0f));
+        obj.transform = glm::scale(obj.transform, glm::vec3(2.0f)); // Scale up
+        obj.color = glm::vec3(0.1f, 0.2f, 0.9f); // Blue
+        obj.metallic = 1.0;
+        obj.roughness = 0.5;
+        obj.transparency = 0.0;  // Opaque
         _sceneObjects.push_back(obj);
     }
 
-    // Create a Pyramid
+    // Create a glass sphere (transparent with refraction)
     {
         SceneObject obj;
-        obj.geometryType = "pyramid";
-        obj.transform = glm::translate(glm::mat4(1.f), glm::vec3(-3.0f, 0.0f, -3.0f));
-        obj.color = glm::vec3(0.3f, 0.7f, 0.2f); // Greenish
+        obj.geometryType = "box";
+        obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 2.05f, 0.0f));
+        obj.transform = glm::scale(obj.transform, glm::vec3(.2f,4.0f,7.0f)); // Scale up
+        obj.color = glm::vec3(0.95f, 0.98f, 1.0f); // Slight blue tint for glass
+        obj.metallic = 0.0;
+        obj.roughness = 0.05;
+        obj.transparency = 1.00;  // Nearly fully transparent
+        obj.ior = 1.52f;  // Glass index of refraction
+        obj.absorbance = glm::vec3(0.1f,0.1f,0.1f);
         _sceneObjects.push_back(obj);
     }
 
-    // Create a Doughnut
+
     {
         SceneObject obj;
         obj.geometryType = "doughnut";
-        obj.transform = glm::scale(glm::mat4(1.f), glm::vec3(1.5f)); // Scale up
-        obj.transform = glm::translate(obj.transform, glm::vec3(0.0f, 0.5f, 0.0f));
-        obj.transform = glm::rotate(obj.transform, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        
-        obj.color = glm::vec3(0.8f, 0.8f, 0.1f); // Yellowish
+        obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, 1.01f, 3.0f));
+        obj.transform = glm::scale(obj.transform, glm::vec3(2.f)); // Scale up
+        obj.transform = glm::rotate(obj.transform, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        obj.color = glm::vec3(0.05f, 0.7f, 0.01f); // Slight blue tint for glass
+        obj.metallic = 0.0;
+        obj.roughness = 0.8;
+        obj.transparency = 0.8;  // Nearly fully transparent
+        obj.absorbance = glm::vec3(4.f, 0.1f , 4.f);
+        obj.ior = 1.02;
         _sceneObjects.push_back(obj);
     }
+
+    // // Create more spheres in random positions without overlapping
+    // std::vector<glm::vec3> spherePositions; // Track placed sphere positions
+    // const float sphereRadius = 0.2f; // Base sphere radius
+    // const float minDistance = sphereRadius * 2.0f + 0.5f; // Minimum distance between centers (with spacing)
+    // const int numSpheres = 30;
+    // const int maxAttempts = 100; // Max attempts per sphere to find valid position
+
+    // for(int i = 0; i < numSpheres; i++) {
+    //     bool validPosition = false;
+    //     glm::vec3 position;
+    //     int attempts = 0;
+
+    //     while(!validPosition && attempts < maxAttempts) {
+    //         // Generate random position in a circular area
+    //         float angle = static_cast<float>(rand()) / RAND_MAX * 360.0f;
+    //         float radius = 3.0f + static_cast<float>(rand()) / RAND_MAX * 12.0f; // Random radius 3-15
+    //         float x = radius * cos(glm::radians(angle));
+    //         float z = radius * sin(glm::radians(angle));
+    //         position = glm::vec3(x, 0.5f, z);
+
+    //         // Check if this position overlaps with any existing sphere
+    //         validPosition = true;
+    //         for(const auto& existingPos : spherePositions) {
+    //             float dist = glm::distance(glm::vec2(position.x, position.z),
+    //                                       glm::vec2(existingPos.x, existingPos.z));
+    //             if(dist < minDistance) {
+    //                 validPosition = false;
+    //                 break;
+    //             }
+    //         }
+    //         attempts++;
+    //     }
+
+    //     // Only add sphere if we found a valid position
+    //     if(validPosition) {
+    //         spherePositions.push_back(position);
+
+    //         SceneObject obj;
+    //         obj.geometryType = i % 3 == 0 ? "sphere" : "icosahedron";
+    //         obj.transform = glm::translate(glm::mat4(1.0f), position);
+    //         obj.transform = glm::scale(obj.transform, glm::vec3(1.0f));
+    //         obj.color = colors[i % colors.size()];
+    //         obj.metallic = i % 2 == 0 ? 0.0 : 1.0;
+    //         obj.roughness = 0.2;
+    //         obj.transparency = i % 4 == 0 ? 1.0 : 0.0;
+    //         _sceneObjects.push_back(obj);
+    //     }
+    // }
+
+    // Create a Pyramid
+    // {
+    //     SceneObject obj;
+    //     obj.geometryType = "pyramid";
+    //     obj.transform = glm::translate(glm::mat4(1.f), glm::vec3(-3.0f, 0.0f, -3.0f));
+    //     obj.color = glm::vec3(0.3f, 0.7f, 0.2f); // Greenish
+    //     obj.metallic = 0.0;
+    //     obj.roughness = 0.8;
+    //     _sceneObjects.push_back(obj);
+    // }
+
+    // Semi-Transparent (jello like)
+    // {
+    //     SceneObject obj;
+    //     obj.geometryType = "sphere";
+    //     obj.transform = glm::scale(glm::mat4(1.f), glm::vec3(1.5f)); // Scale up
+    //     obj.transform = glm::translate(obj.transform, glm::vec3(0.0f, 0.502f, 0.0f));
+    //     obj.transform = glm::rotate(obj.transform, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    //     obj.color = glm::vec3(1.0f, 0.766f, 0.336f); // Yellowish
+    //     obj.metallic = 0.0;
+    //     obj.roughness = 0.02;
+    //     obj.transparency = 0.99; // we still want shadows
+    //     obj.ior = 1.00029;
+    //     obj.absorbance = glm::vec3(8.f, 8.0f, 2.f); 
+    //     _sceneObjects.push_back(obj);
+    // }
+
+    // Silver
+    // {
+    //     SceneObject obj;
+    //     obj.geometryType = "sphere";
+    //     obj.transform = glm::scale(glm::mat4(1.f), glm::vec3(1.5f)); // Scale up
+    //     obj.transform = glm::translate(obj.transform, glm::vec3(0.0f, 0.502f, 0.0f));
+    //     obj.transform = glm::rotate(obj.transform, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    //     obj.color = glm::vec3(0.97, 0.96, 0.91);
+    //     obj.metallic = 1.0;
+    //     obj.roughness = 0.1;
+    //     obj.transparency = 0.0;
+    //     _sceneObjects.push_back(obj);
+    // }
+
+    // Glass
+    // {
+    //     SceneObject obj;
+    //     obj.geometryType = "sphere";
+    //     obj.transform = glm::scale(glm::mat4(1.f), glm::vec3(1.5f)); // Scale up
+    //     obj.transform = glm::translate(obj.transform, glm::vec3(0.0f, 0.502f, 0.0f));
+    //     obj.transform = glm::rotate(obj.transform, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    //     obj.color = glm::vec3(0.97, 0.96, 0.91);
+    //     obj.metallic = 0.0;
+    //     obj.roughness = 0.1;
+    //     obj.transparency = 1.0;
+    //     obj.ior = 1.03;
+    //     _sceneObjects.push_back(obj);
+    // }
+
+    // Plastic
+    // {
+    //     SceneObject obj;
+    //     obj.geometryType = "sphere";
+    //     obj.transform = glm::scale(glm::mat4(1.f), glm::vec3(1.5f)); // Scale up
+    //     obj.transform = glm::translate(obj.transform, glm::vec3(0.0f, 0.502f, 0.0f));
+    //     obj.transform = glm::rotate(obj.transform, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    //     obj.color = glm::vec3(1.0, 0.8, 0.0);
+    //     obj.metallic = 0.0;
+    //     obj.roughness = 0.9;
+    //     obj.transparency = 0.99;
+    //     obj.absorbance = glm::vec3(0.1,0.5,8.0);
+    //     obj.ior = 1.001;
+    //     _sceneObjects.push_back(obj);
+    // }
 
     // Create a Cone
-    {
-        SceneObject obj;
-        obj.geometryType = "cone";
-        obj.transform = glm::translate(glm::mat4(1.f), glm::vec3(3.0f, 0.f, 0.0f));
-        obj.transform = glm::scale(obj.transform, glm::vec3(1.2f)); // Scale up
-        obj.color = glm::vec3(0.7f, 0.2f, 0.7f); // Purple-ish
-        _sceneObjects.push_back(obj);
-    }
+    // {
+    //     SceneObject obj;
+    //     obj.geometryType = "cone";
+    //     obj.transform = glm::translate(glm::mat4(1.f), glm::vec3(3.0f, 0.f, 0.0f));
+    //     obj.transform = glm::scale(obj.transform, glm::vec3(1.2f)); // Scale up
+    //     obj.color = glm::vec3(0.7f, 0.2f, 0.7f); // Purple-ish
+    //     obj.metallic = 0.0;
+    //     obj.roughness = 0.8;
+    //     _sceneObjects.push_back(obj);
+    // }
 
     // Create a Cylinder
-    {
-        SceneObject obj;
-        obj.geometryType = "cylinder";
-        obj.transform = glm::translate(glm::mat4(1.f), glm::vec3(3.0f, 0.5f, -3.0f));
-        obj.transform = glm::scale(obj.transform, glm::vec3(1.0f, 1.0f, 1.0f)); // Scale up
-        obj.color = glm::vec3(0.2f, 0.7f, 0.7f); // Teal-ish
-        _sceneObjects.push_back(obj);
-    }
+    // {
+    //     SceneObject obj;
+    //     obj.geometryType = "cylinder";
+    //     obj.transform = glm::translate(glm::mat4(1.f), glm::vec3(3.0f, 0.5f, -3.0f));
+    //     obj.transform = glm::scale(obj.transform, glm::vec3(1.0f, 1.0f, 1.0f)); // Scale up
+    //     obj.color = glm::vec3(0.2f, 0.7f, 0.7f); // Teal-ish
+    //     obj.metallic = 0.0;
+    //     obj.roughness = 0.8;
+    //     _sceneObjects.push_back(obj);
+    // }
 
     // Create a extruded hexagon
-    {
-        SceneObject obj;
-        obj.geometryType = "extruded_hexagon";
-        obj.transform = glm::translate(glm::mat4(1.f), glm::vec3(0.0f, 0.6f, 3.0f));
-        obj.transform = glm::rotate(obj.transform, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        obj.transform = glm::scale(obj.transform, glm::vec3(1.f, 1.0f, 1.0f)); // Scale up
-        obj.color = glm::vec3(0.9f, 0.6f, 0.2f); // Orange-ish
-        _sceneObjects.push_back(obj);
-    }
+    // {
+    //     SceneObject obj;
+    //     obj.geometryType = "extruded_hexagon";
+    //     obj.transform = glm::translate(glm::mat4(1.f), glm::vec3(0.0f, 0.6f, 3.0f));
+    //     obj.transform = glm::rotate(obj.transform, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    //     obj.transform = glm::scale(obj.transform, glm::vec3(1.f, 1.0f, 1.0f)); // Scale up
+    //     obj.color = glm::vec3(0.9f, 0.6f, 0.2f); // Orange-ish
+    //     obj.metallic = 0.0;
+    //     obj.roughness = 0.8;
+    //     obj.transparency = 1.0;
+    //     _sceneObjects.push_back(obj);
+    // }
 
     // Create an icosahedron
-    {
-        SceneObject obj;
-        obj.geometryType = "icosahedron";
-        obj.transform = glm::translate(glm::mat4(1.f), glm::vec3(0.0f, 0.5f, -3.0f));
-        obj.transform = glm::scale(obj.transform, glm::vec3(1.2f)); // Scale up
-        obj.color = glm::vec3(0.4f, 0.4f, 0.9f); // Light blue-ish
-        _sceneObjects.push_back(obj);
-    }
+    // {
+    //     SceneObject obj;
+    //     obj.geometryType = "icosahedron";
+    //     obj.transform = glm::translate(glm::mat4(1.f), glm::vec3(0.0f, 0.5f, -3.0f));
+    //     obj.transform = glm::scale(obj.transform, glm::vec3(1.2f)); // Scale up
+    //     obj.color = glm::vec3(0.4f, 0.4f, 0.9f); // Light blue-ish
+    //     obj.metallic = 0.0;
+    //     obj.roughness = 0.8;
+    //     obj.transparency = 1.0;
+    //     _sceneObjects.push_back(obj);
+    // }
 
-    // Create a rhombus
-    {
-        SceneObject obj;
-        obj.geometryType = "rhombus";
-        obj.transform = glm::translate(glm::mat4(1.f), glm::vec3(3.0f, 0.5f, 3.0f));
-        obj.transform = glm::scale(obj.transform, glm::vec3(1.0f, 1.5f, 1.0f)); // Scale up
-        obj.color = glm::vec3(0.6f, 0.2f, 0.2f); // Reddish
-        _sceneObjects.push_back(obj);
-    }
+    // // Create a rhombus
+    // {
+    //     SceneObject obj;
+    //     obj.geometryType = "rhombus";
+    //     obj.transform = glm::translate(glm::mat4(1.f), glm::vec3(3.0f, 0.75f, 3.0f));
+    //     obj.transform = glm::scale(obj.transform, glm::vec3(1.0f, 1.5f, 1.0f)); // Scale up
+    //     obj.color = glm::vec3(0.6f, 0.2f, 0.2f); // Reddish
+    //     obj.roughness = 0.8;
+    //     obj.transparency = 1.0;
+    //     _sceneObjects.push_back(obj);
+    // }
 
     // 
 
@@ -516,10 +687,11 @@ void RayTracingScene::createInstanceDataBuffer() {
         instanceData.indexBufferAddress = geom.dmesh->getIndexBufferDeviceAddress().deviceAddress;
         instanceData.materialType = obj.materialType;
         instanceData.color = obj.color;
-        instanceData.metallic = 0.0f;  // Default material properties
+        instanceData.metallic = obj.metallic;
         instanceData.roughness = 0.5f;
-        instanceData._pad0 = 0.0f;
-        instanceData._pad1 = 0.0f;
+        instanceData.transparency = obj.transparency;
+        instanceData.ior = obj.ior;
+        instanceData.absorbance = obj.absorbance;
 
         instanceDataArray.push_back(instanceData);
     }
@@ -552,7 +724,7 @@ void RayTracingScene::createDescriptorSets() {
             Descriptor(2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 1, _uniformBuffers[i]->getDescriptorInfo()),
 
             // Instance data buffer (contains per-instance material and buffer addresses)
-            Descriptor(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 1, _instanceDataBuffer->getDescriptorInfo())
+            Descriptor(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_ANY_HIT_BIT_KHR, 1, _instanceDataBuffer->getDescriptorInfo())
         };
         _descriptorSets[i] = std::make_unique<DescriptorSet>(_ctx, descriptors);
     }
@@ -593,6 +765,7 @@ void RayTracingScene::createRayTracingPipeline() {
         AssetPath::getInstance()->get("spv/raygen_rgen.spv"),
         missShaderPaths,
         AssetPath::getInstance()->get("spv/closesthit_rchit.spv"),
+        AssetPath::getInstance()->get("spv/shadow_rahit.spv"),
         pipelineParams);
 }
 
@@ -660,4 +833,84 @@ void RayTracingScene::handleMouseDrag(float dx, float dy) {
 void RayTracingScene::handleMouseWheel(float dy) {
     // Zoom camera based on scroll
     _camera->changeZoom(static_cast<float>(dy) * 0.3f);
+}
+
+void RayTracingScene::handleKeyDown(int key, int scancode, int mods) {
+
+    switch (key)
+    {
+    case SDLK_S:
+        // Save scene state
+        saveSceneState("scene_state.txt");
+        spdlog::info("Scene state saved.");
+        break;
+
+    case SDLK_L:
+        // Load scene state
+        loadSceneState("scene_state.txt");
+        spdlog::info("Scene state loaded.");
+        break;
+
+    case SDLK_O:
+        _cameraOrbiting = !_cameraOrbiting;
+        break;
+    
+    default:
+        break;
+    }
+}
+
+void RayTracingScene::saveSceneState(const std::string& filename)
+{
+    std::ofstream outFile(filename);
+    if (!outFile.is_open()) {
+        spdlog::error("Failed to open file for saving scene state: {}", filename);
+        return;
+    }
+
+    // Save scene time
+    outFile << _time << std::endl;
+
+    // Save camera state
+    // Radius
+    outFile << _camera->getRadius() << std::endl;
+    // Elevation
+    outFile << _camera->getElevation() << std::endl;
+    // Azimuth
+    outFile << _camera->getAzimuth() << std::endl;
+
+    outFile.close();
+}
+
+
+void RayTracingScene::loadSceneState(const std::string& filename)
+{
+    std::ifstream inFile(filename);
+    if (!inFile.is_open()) {
+        spdlog::error("Failed to open file for loading scene state: {}", filename);
+        return;
+    }
+
+    std::string line;
+
+    // Load scene time
+    std::getline(inFile, line);
+    _time = std::stof(line);
+
+    // Load camera state
+
+    // Radius
+    std::getline(inFile, line);
+    float radius = std::stof(line);
+    _camera->setRadius(radius);
+    // Elevation
+    std::getline(inFile, line);
+    float elevation = std::stof(line);
+    _camera->setElevation(elevation);
+    // Azimuth
+    std::getline(inFile, line);
+    float azimuth = std::stof(line);
+    _camera->setAzimuth(azimuth);
+
+    inFile.close();
 }

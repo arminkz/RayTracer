@@ -19,6 +19,7 @@ public:
     virtual void handleMouseClick(float mx, float my) = 0;
     virtual void handleMouseDrag(float dx, float dy) = 0;
     virtual void handleMouseWheel(float dy) = 0;
+    virtual void handleKeyDown(int key, int scancode, int mods) = 0;
 
 protected:
     std::shared_ptr<VulkanContext> _ctx;

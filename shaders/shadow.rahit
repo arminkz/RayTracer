@@ -1,0 +1,34 @@
+#version 460
+#extension GL_EXT_ray_tracing : enable
+#extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_scalar_block_layout : enable
+#extension GL_EXT_buffer_reference : enable
+
+// Reuse your InstanceData struct and buffer reference here...
+
+struct InstanceData {
+    uvec2 vertexBufferAddress;  // 64-bit address as uvec2
+    uvec2 indexBufferAddress;   // 64-bit address as uvec2
+    uint  materialType;
+    vec3  color;
+    float metallic;
+    float roughness;
+    float transparency;  // 0 = opaque, 1 = fully transparent
+    float ior;           // Index of refraction
+    vec3  absorbance;    // Used for semi-translucent objects (Beer-Lambert law)
+    float pad;
+};
+
+layout(binding = 3, set = 0, scalar) readonly buffer InstanceDataBuffer {
+    InstanceData instances[];
+} instanceDataBuffer;
+
+void main() {
+    // Get the instance data
+    const InstanceData instanceData = instanceDataBuffer.instances[gl_InstanceCustomIndexEXT];
+
+    // Check Transparency
+    if (instanceData.transparency == 1.0) {
+        ignoreIntersectionEXT;
+    }
+}

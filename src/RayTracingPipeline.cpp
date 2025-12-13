@@ -5,11 +5,12 @@ RayTracingPipeline::RayTracingPipeline(std::shared_ptr<VulkanContext> ctx,
     const std::string& raygenShaderPath,
     const std::vector<std::string>& missShaderPaths,
     const std::string& closestHitShaderPath,
+    const std::string& anyHitShaderPath,
     const RayTracingPipelineParams& params)
     : _ctx(std::move(ctx)), _name(params.name)
 {
     createPipelineLayout(params);
-    createRayTracingPipeline(raygenShaderPath, missShaderPaths, closestHitShaderPath, params);
+    createRayTracingPipeline(raygenShaderPath, missShaderPaths, closestHitShaderPath, anyHitShaderPath, params);
 }
 
 
@@ -48,6 +49,7 @@ void RayTracingPipeline::createRayTracingPipeline(
     const std::string& raygenShaderPath,
     const std::vector<std::string>& missShaderPaths,
     const std::string& closestHitShaderPath,
+    const std::string& anyHitShaderPath,
     const RayTracingPipelineParams& params)
 {
 
@@ -66,6 +68,8 @@ void RayTracingPipeline::createRayTracingPipeline(
     // Load closest hit shader
     auto closestHitShaderCode = readBinaryFile(closestHitShaderPath);
 
+    // Load any hit shader
+    auto anyHitShaderCode = readBinaryFile(anyHitShaderPath);
 
     // Create shader modules
     VkShaderModule raygenShaderModule = createShaderModule(raygenShaderCode);
@@ -79,6 +83,8 @@ void RayTracingPipeline::createRayTracingPipeline(
     // Create closest hit shader module
     VkShaderModule closestHitShaderModule = createShaderModule(closestHitShaderCode);
 
+    // Create any hit shader module
+    VkShaderModule anyHitShaderModule = createShaderModule(anyHitShaderCode);
 
     // Ray generation group
     {
@@ -127,14 +133,22 @@ void RayTracingPipeline::createRayTracingPipeline(
         closestHitShaderStageInfo.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
         closestHitShaderStageInfo.module = closestHitShaderModule;
         closestHitShaderStageInfo.pName = "main";
-
         shaderStages.push_back(closestHitShaderStageInfo);
+
+        // Any hit shader stage info
+        VkPipelineShaderStageCreateInfo anyHitShaderStageInfo{};
+        anyHitShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        anyHitShaderStageInfo.stage = VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
+        anyHitShaderStageInfo.module = anyHitShaderModule;
+        anyHitShaderStageInfo.pName = "main";
+        shaderStages.push_back(anyHitShaderStageInfo);
+
         VkRayTracingShaderGroupCreateInfoKHR shaderGroup{};
         shaderGroup.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
         shaderGroup.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
         shaderGroup.generalShader = VK_SHADER_UNUSED_KHR;
-        shaderGroup.closestHitShader = static_cast<uint32_t>(shaderStages.size()) - 1;
-        shaderGroup.anyHitShader = VK_SHADER_UNUSED_KHR;
+        shaderGroup.closestHitShader = static_cast<uint32_t>(shaderStages.size()) - 2;
+        shaderGroup.anyHitShader = static_cast<uint32_t>(shaderStages.size()) - 1;
         shaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
         _shaderGroups.push_back(shaderGroup);
     }
@@ -148,7 +162,7 @@ void RayTracingPipeline::createRayTracingPipeline(
     rayTracingPipelineCI.pStages = shaderStages.data();
     rayTracingPipelineCI.groupCount = static_cast<uint32_t>(_shaderGroups.size());
     rayTracingPipelineCI.pGroups = _shaderGroups.data();
-    rayTracingPipelineCI.maxPipelineRayRecursionDepth = 2;  // Increased to 2 for shadow rays
+    rayTracingPipelineCI.maxPipelineRayRecursionDepth = 8;  // Max Recursive ray casts
     rayTracingPipelineCI.layout = _pipelineLayout;
     rayTracingPipelineCI.basePipelineHandle = VK_NULL_HANDLE;
     rayTracingPipelineCI.basePipelineIndex = -1;
@@ -165,6 +179,7 @@ void RayTracingPipeline::createRayTracingPipeline(
         vkDestroyShaderModule(_ctx->device, module, nullptr);
     }
     vkDestroyShaderModule(_ctx->device, closestHitShaderModule, nullptr);
+    vkDestroyShaderModule(_ctx->device, anyHitShaderModule, nullptr);
 }
 
 VkShaderModule RayTracingPipeline::createShaderModule(const std::vector<char>& code)

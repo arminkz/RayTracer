@@ -24,6 +24,7 @@ public:
     void handleMouseClick(float mx, float my) override;
     void handleMouseDrag(float dx, float dy) override;
     void handleMouseWheel(float dy) override;
+    void handleKeyDown(int key, int scancode, int mods) override;
 
 private:
 
@@ -68,6 +69,7 @@ private:
 
     // Camera
     std::unique_ptr<TurnTableCamera> _camera;
+    bool _cameraOrbiting = false;
 
     // Time
     float _time = 0.0f;
@@ -86,9 +88,14 @@ private:
     struct SceneObject {
         std::string geometryType;
         glm::mat4 transform;
+        int materialType = 0;        // 0 = normal, 1=Emissive, 999= checkerboard
         glm::vec3 color;
-        int materialType = 0; // 0 = normal, 1=Emissive, 999= checkerboard
-
+        float metallic = 0.0f;
+        float roughness = 0.0f;
+        float transparency = 0.0f;   // 0 = opaque, 1 = fully transparent
+        float ior = 1.5f;            // Index of refraction (1.5 for glass)
+        glm::vec3 absorbance;
+        
         // Additional material properties can be added here
     };
     std::vector<SceneObject> _sceneObjects;
@@ -105,4 +112,8 @@ private:
 
     // Light source sphere index (for dynamic updates)
     size_t _lightSphereIndex = 0;
+
+    // Misc
+    void saveSceneState(const std::string& filename);
+    void loadSceneState(const std::string& filename);
 };

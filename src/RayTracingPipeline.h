@@ -18,6 +18,7 @@ public:
         const std::string& raygenShaderPath,
         const std::vector<std::string>& missShaderPaths,
         const std::string& closestHitShaderPath,
+        const std::string& anyHitShaderPath,
         const RayTracingPipelineParams& params
     );
     ~RayTracingPipeline();
@@ -40,6 +41,7 @@ private:
         const std::string& raygenShaderPath,
         const std::vector<std::string>& missShaderPaths,
         const std::string& closestHitShaderPath,
+        const std::string& anyHitShaderPath,
         const RayTracingPipelineParams& params
     );
     
