@@ -39,12 +39,14 @@ set(LIBRARIES
 file(GLOB SOURCES
     src/*
     src/utils/*
+    src/loader/*
     src/structure/*
     src/geometry/*
 )
 
 # Handle .h files
 set(INCLUDES ${INCLUDES} src)
+set(INCLUDES ${INCLUDES} external/tinyobjloader)
 
 # Set asset directory definition
 add_compile_definitions("ASSET_DIR=${CMAKE_SOURCE_DIR}/assets/")

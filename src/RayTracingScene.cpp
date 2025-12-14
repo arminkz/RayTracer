@@ -11,6 +11,7 @@
 #include "AssetPath.h"
 #include "VulkanRT.h"
 #include "InstanceData.h"
+#include "loader/ObjLoader.h"
 
 
 RayTracingScene::RayTracingScene(std::shared_ptr<VulkanContext> ctx, std::shared_ptr<SwapChain> swapChain)
@@ -323,6 +324,11 @@ void RayTracingScene::createGeometryTemplates() {
     _geometryTemplates["rhombus"].blas = std::make_unique<BLAS>(_ctx);
     _geometryTemplates["rhombus"].blas->initialize(*_geometryTemplates["rhombus"].dmesh);
 
+    // Teapot
+    HostMesh teapotMesh = ObjLoader::load(AssetPath::getInstance()->get("mesh/teapot.obj"));
+    _geometryTemplates["teapot"].dmesh = std::make_unique<DeviceMesh>(_ctx, teapotMesh, identityTransform);
+    _geometryTemplates["teapot"].blas = std::make_unique<BLAS>(_ctx);
+    _geometryTemplates["teapot"].blas->initialize(*_geometryTemplates["teapot"].dmesh);
 
     // Put more geometry templates here as needed
 }
@@ -394,49 +400,54 @@ void RayTracingScene::createSceneObjects() {
     // }
 
 
+    // 
+
+
     // Plastic Cylinder
     {
         SceneObject obj;
-        obj.geometryType = "sphere";
-        obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.01f, 0.0f));
-        obj.transform = glm::scale(obj.transform, glm::vec3(2.0f)); // Scale up
-        obj.color = glm::vec3(0.1f, 0.2f, 0.9f); // Blue
-        obj.metallic = 1.0;
+        obj.geometryType = "teapot";
+        obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.05f, 0.0f));
+        obj.transform = glm::scale(obj.transform, glm::vec3(1.0f)); // Scale up
+        obj.color = glm::vec3(1.0f, 0.766f, 0.336f); // Yellowish
+        obj.metallic = 0.0;
         obj.roughness = 0.5;
-        obj.transparency = 0.0;  // Opaque
+        obj.transparency = 1.0;
+        obj.ior = 1.05f;
+        //obj.absorbance = glm::vec3(8.f, 8.0f, 2.f); 
         _sceneObjects.push_back(obj);
     }
 
     // Create a glass sphere (transparent with refraction)
-    {
-        SceneObject obj;
-        obj.geometryType = "box";
-        obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 2.05f, 0.0f));
-        obj.transform = glm::scale(obj.transform, glm::vec3(.2f,4.0f,7.0f)); // Scale up
-        obj.color = glm::vec3(0.95f, 0.98f, 1.0f); // Slight blue tint for glass
-        obj.metallic = 0.0;
-        obj.roughness = 0.05;
-        obj.transparency = 1.00;  // Nearly fully transparent
-        obj.ior = 1.52f;  // Glass index of refraction
-        obj.absorbance = glm::vec3(0.1f,0.1f,0.1f);
-        _sceneObjects.push_back(obj);
-    }
+    // {
+    //     SceneObject obj;
+    //     obj.geometryType = "box";
+    //     obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 2.05f, 0.0f));
+    //     obj.transform = glm::scale(obj.transform, glm::vec3(.2f,4.0f,7.0f)); // Scale up
+    //     obj.color = glm::vec3(0.95f, 0.98f, 1.0f); // Slight blue tint for glass
+    //     obj.metallic = 0.0;
+    //     obj.roughness = 0.05;
+    //     obj.transparency = 1.00;  // Nearly fully transparent
+    //     obj.ior = 1.52f;  // Glass index of refraction
+    //     obj.absorbance = glm::vec3(0.1f,0.1f,0.1f);
+    //     _sceneObjects.push_back(obj);
+    // }
 
 
-    {
-        SceneObject obj;
-        obj.geometryType = "doughnut";
-        obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, 1.01f, 3.0f));
-        obj.transform = glm::scale(obj.transform, glm::vec3(2.f)); // Scale up
-        obj.transform = glm::rotate(obj.transform, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        obj.color = glm::vec3(0.05f, 0.7f, 0.01f); // Slight blue tint for glass
-        obj.metallic = 0.0;
-        obj.roughness = 0.8;
-        obj.transparency = 0.8;  // Nearly fully transparent
-        obj.absorbance = glm::vec3(4.f, 0.1f , 4.f);
-        obj.ior = 1.02;
-        _sceneObjects.push_back(obj);
-    }
+    // {
+    //     SceneObject obj;
+    //     obj.geometryType = "doughnut";
+    //     obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(5.0f, 1.01f, 3.0f));
+    //     obj.transform = glm::scale(obj.transform, glm::vec3(2.f)); // Scale up
+    //     obj.transform = glm::rotate(obj.transform, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    //     obj.color = glm::vec3(0.05f, 0.7f, 0.01f); // Slight blue tint for glass
+    //     obj.metallic = 0.0;
+    //     obj.roughness = 0.8;
+    //     obj.transparency = 0.8;  // Nearly fully transparent
+    //     obj.absorbance = glm::vec3(4.f, 0.1f , 4.f);
+    //     obj.ior = 1.02;
+    //     _sceneObjects.push_back(obj);
+    // }
 
     // // Create more spheres in random positions without overlapping
     // std::vector<glm::vec3> spherePositions; // Track placed sphere positions

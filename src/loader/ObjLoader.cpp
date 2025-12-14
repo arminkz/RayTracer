@@ -34,12 +34,21 @@ namespace ObjLoader {
                     attrib.vertices[3 * index.vertex_index + 2]
                 };
 
-                vertex.texCoord = {
-                    attrib.texcoords[2 * index.texcoord_index + 0],
-                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-                };
+                // Load vertex normals if available
+                if (index.normal_index >= 0) {
+                    vertex.normal = {
+                        attrib.normals[3 * index.normal_index + 0],
+                        attrib.normals[3 * index.normal_index + 1],
+                        attrib.normals[3 * index.normal_index + 2]
+                    };
+                }
 
-                vertex.color = { 1.0f, 1.0f, 1.0f, 1.0f }; // Default color (white)
+                // vertex.texCoord = {
+                //     attrib.texcoords[2 * index.texcoord_index + 0],
+                //     1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+                // };
+
+                //vertex.color = { 1.0f, 1.0f, 1.0f, 1.0f }; // Default color (white)
 
                 // if the vertex is not already in the map, add it
                 // and assign it a unique index
