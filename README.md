@@ -25,7 +25,7 @@ This renderer employs recursive ray tracing to achieve realistic reflections on 
 
 | Reflection |
 |------------|
-| ![Reflection](doc/teapot_metalic.png) |
+| ![Reflection](doc/teapot_brass.png) |
 
 </div>
 

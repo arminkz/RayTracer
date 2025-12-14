@@ -409,11 +409,11 @@ void RayTracingScene::createSceneObjects() {
         obj.geometryType = "teapot";
         obj.transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.05f, 0.0f));
         obj.transform = glm::scale(obj.transform, glm::vec3(1.0f)); // Scale up
-        obj.color = glm::vec3(1.0f, 0.766f, 0.336f); // Yellowish
-        obj.metallic = 0.0;
-        obj.roughness = 0.5;
-        obj.transparency = 1.0;
-        obj.ior = 1.05f;
+        obj.color = glm::vec3(0.672f, 0.490f, 0.203f); // Yellowish
+        obj.metallic = 1.0;
+        obj.roughness = 0.3;
+        obj.transparency = 0.0;
+        //obj.ior = 1.05f;
         //obj.absorbance = glm::vec3(8.f, 8.0f, 2.f); 
         _sceneObjects.push_back(obj);
     }
