@@ -1,7 +1,8 @@
 # Vulkan Ray Tracer
 
-A real-time physically-based ray tracer built with Vulkan's ray tracing extensions. This project implements advanced rendering techniques including PBR materials, reflections, refractions, and soft shadows.
+https://github.com/user-attachments/assets/a795950f-483f-43e1-aa27-b8504d46ad6c
 
+A real-time physically-based ray tracer built with Vulkan's ray tracing extensions. This project implements advanced rendering techniques including PBR materials, reflections, refractions, and soft shadows.
 
 ## Shadows
 This renderer uses shadow rays to determine light visibility at intersection points, resulting in realistic soft shadows. Area lights are sampled to create smooth penumbra effects.
