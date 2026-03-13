@@ -73,9 +73,37 @@ void Renderer::createSyncObjects() {
 
 
 void Renderer::invalidate() {
-    // Handle swap chain recreation on window resize (TODO)
     vkDeviceWaitIdle(_ctx->device);
-    spdlog::error("Window resized. (Equivalat to getting nuked in Vulkan terms) (TODO)");
+    spdlog::info("Recreating swapchain after window resize.");
+
+    // Destroy semaphores — their count depends on swapchain image count, which may change
+    for (auto sem : _imageAvailableSemaphores)
+        vkDestroySemaphore(_ctx->device, sem, nullptr);
+    for (auto sem : _renderFinishedSemaphores)
+        vkDestroySemaphore(_ctx->device, sem, nullptr);
+    _imageAvailableSemaphores.clear();
+    _renderFinishedSemaphores.clear();
+
+    // Recreate swapchain with new window dimensions
+    _swapChain->cleanupSwapChain();
+    _swapChain->createSwapChain();
+
+    // Recreate semaphores for the (potentially new) image count
+    VkSemaphoreCreateInfo semaphoreInfo{};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    _imageAvailableSemaphores.resize(_swapChain->getSwapChainImageCount());
+    _renderFinishedSemaphores.resize(_swapChain->getSwapChainImageCount());
+    for (int i = 0; i < _swapChain->getSwapChainImageCount(); i++) {
+        vkCreateSemaphore(_ctx->device, &semaphoreInfo, nullptr, &_imageAvailableSemaphores[i]);
+        vkCreateSemaphore(_ctx->device, &semaphoreInfo, nullptr, &_renderFinishedSemaphores[i]);
+    }
+
+    // Reset frame counters
+    _frameCounter = 0;
+    _imageCounter = 0;
+
+    // Notify scene to resize storage image and update descriptors
+    _scene->onSwapChainRecreated();
 }
 
 

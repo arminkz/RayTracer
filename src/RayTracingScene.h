@@ -5,8 +5,8 @@
 #include "Scene.h"
 #include "structure/Buffer.h"
 #include "structure/TLAS.h"
-#include "structure/BLAS.h"
 #include "structure/StorageImage.h"
+#include "SceneGraph.h"
 #include "RayTracingPipeline.h"
 #include "DescriptorSet.h"
 #include "TurnTableCamera.h"
@@ -20,6 +20,7 @@ public:
 
     void update(uint32_t currentImage) override;
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t targetSwapImageIndex) override;
+    void onSwapChainRecreated() override;
 
     void handleMouseClick(float mx, float my) override;
     void handleMouseDrag(float dx, float dy) override;
@@ -76,30 +77,8 @@ private:
     bool _isPaused = false;
     TimePoint _lastFrameTime = std::chrono::high_resolution_clock::now();
 
-    // Geometry templates
-    struct GeometryTemplate {
-        std::unique_ptr<DeviceMesh> dmesh;
-        std::unique_ptr<BLAS> blas;
-    };
-    std::unordered_map<std::string, GeometryTemplate> _geometryTemplates;
-    void createGeometryTemplates();
-
-    // Scene Objects
-    struct SceneObject {
-        std::string geometryType;
-        glm::mat4 transform;
-        int materialType = 0;        // 0 = normal, 1=Emissive, 999= checkerboard
-        glm::vec3 color;
-        float metallic = 0.0f;
-        float roughness = 0.0f;
-        float transparency = 0.0f;   // 0 = opaque, 1 = fully transparent
-        float ior = 1.5f;            // Index of refraction (1.5 for glass)
-        glm::vec3 absorbance;
-        
-        // Additional material properties can be added here
-    };
-    std::vector<SceneObject> _sceneObjects;
-    void createSceneObjects();
+    // Scene graph (geometry templates + scene objects)
+    std::unique_ptr<SceneGraph> _sceneGraph;
 
     // Top Level Acceleration Structure (TLAS)
     std::unique_ptr<TLAS> _tlas;
@@ -109,9 +88,6 @@ private:
     // Instance Data Buffer
     std::unique_ptr<Buffer> _instanceDataBuffer;
     void createInstanceDataBuffer();
-
-    // Light source sphere index (for dynamic updates)
-    size_t _lightSphereIndex = 0;
 
     // Misc
     void saveSceneState(const std::string& filename);

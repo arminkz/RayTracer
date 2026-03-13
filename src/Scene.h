@@ -15,6 +15,9 @@ public:
     // Child classes should implement this method to create their own scene
     virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) = 0;
 
+    // Called when the swapchain is recreated (window resize)
+    virtual void onSwapChainRecreated() {}
+
     // IO handling
     virtual void handleMouseClick(float mx, float my) = 0;
     virtual void handleMouseDrag(float dx, float dy) = 0;

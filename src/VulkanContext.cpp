@@ -281,9 +281,9 @@ void VulkanContext::createDescriptorPool() {
     uint32_t totalUBOs = MAX_FRAMES_IN_FLIGHT;
     uint32_t totalSSBOs = 10;
     //uint32_t totalSamplers = 70;
-    uint32_t totalAccelerationStructures = MAX_FRAMES_IN_FLIGHT; // One per frame
-    uint32_t totalStorageImages = MAX_FRAMES_IN_FLIGHT;          // One per frame
-    uint32_t maxSets = MAX_FRAMES_IN_FLIGHT;                     // One per frame
+    uint32_t totalAccelerationStructures = MAX_FRAMES_IN_FLIGHT;     // One per frame
+    uint32_t totalStorageImages = MAX_FRAMES_IN_FLIGHT;              // One per frame
+    uint32_t maxSets = MAX_FRAMES_IN_FLIGHT * 2;                     // One per frame + One contingency while resizing
 
     std::vector<VkDescriptorPoolSize> poolSizes = {
         //{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, totalSamplers }
@@ -295,6 +295,7 @@ void VulkanContext::createDescriptorPool() {
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = maxSets;

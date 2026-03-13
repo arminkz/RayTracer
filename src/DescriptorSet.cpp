@@ -11,6 +11,7 @@ DescriptorSet::DescriptorSet(std::shared_ptr<VulkanContext> ctx, const std::vect
 
 DescriptorSet::~DescriptorSet()
 {
+    vkFreeDescriptorSets(_ctx->device, _ctx->descriptorPool, 1, &_descriptorSet);
     vkDestroyDescriptorSetLayout(_ctx->device, _descriptorSetLayout, nullptr);
 }
 
