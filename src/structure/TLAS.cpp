@@ -2,16 +2,8 @@
 #include "Buffer.h"
 #include "VulkanRT.h"
 
-TLAS::TLAS(std::shared_ptr<VulkanContext> ctx)
-    : _ctx(std::move(ctx)), _asBuffer(_ctx)
-{
-}
-
-TLAS::~TLAS()
-{
-}
-
-void TLAS::initialize(const std::vector<VkAccelerationStructureInstanceKHR>& instances)
+TLAS::TLAS(std::shared_ptr<VulkanContext> ctx, const std::vector<VkAccelerationStructureInstanceKHR>& instances)
+    : _ctx(std::move(ctx))
 {
     if (instances.empty()) {
         spdlog::error("TLAS::initialize called with empty instances vector!");
@@ -22,8 +14,8 @@ void TLAS::initialize(const std::vector<VkAccelerationStructureInstanceKHR>& ins
     const VkDeviceSize instancesBufferSize = sizeof(VkAccelerationStructureInstanceKHR) * instanceCount;
 
     // Buffer for instance data
-    Buffer instancesBuffer(_ctx);
-    instancesBuffer.initialize(
+    Buffer instancesBuffer(
+        _ctx,
         instancesBufferSize,
         VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -79,7 +71,8 @@ void TLAS::initialize(const std::vector<VkAccelerationStructureInstanceKHR>& ins
     // // Get the device address of the acceleration structure buffer
     // _deviceAddress = VulkanHelper::getBufferDeviceAddress(_ctx, _buffer);
 
-    _asBuffer.initialize(
+    _asBuffer = std::make_unique<Buffer>(
+        _ctx,
         accelerationStructureBuildSizesInfo.accelerationStructureSize,
         VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -87,7 +80,7 @@ void TLAS::initialize(const std::vector<VkAccelerationStructureInstanceKHR>& ins
 
     VkAccelerationStructureCreateInfoKHR accelerationStructureCreateInfo{};
     accelerationStructureCreateInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
-    accelerationStructureCreateInfo.buffer = _asBuffer.getBuffer();
+    accelerationStructureCreateInfo.buffer = _asBuffer->getBuffer();
     accelerationStructureCreateInfo.size = accelerationStructureBuildSizesInfo.accelerationStructureSize;
     accelerationStructureCreateInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
     // Note: createFlags should be 0. The ALLOW_UPDATE flag is a build flag, not a create flag
@@ -97,8 +90,8 @@ void TLAS::initialize(const std::vector<VkAccelerationStructureInstanceKHR>& ins
     // Create a small scratch buffer used during build of the top level acceleration structure
     //RayTracingScratchBuffer scratchBuffer = createScratchBuffer(accelerationStructureBuildSizesInfo.buildScratchSize);
 
-    Buffer scratchBuffer(_ctx);
-    scratchBuffer.initialize(
+    Buffer scratchBuffer(
+        _ctx,
         accelerationStructureBuildSizesInfo.buildScratchSize,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -142,6 +135,10 @@ void TLAS::initialize(const std::vector<VkAccelerationStructureInstanceKHR>& ins
     spdlog::info("Top Level Acceleration Structure created with {} instances.", instanceCount);
 }
 
+TLAS::~TLAS()
+{
+}
+
 void TLAS::update(const std::vector<VkAccelerationStructureInstanceKHR>& instances)
 {
     if (instances.empty()) {
@@ -153,8 +150,8 @@ void TLAS::update(const std::vector<VkAccelerationStructureInstanceKHR>& instanc
     const VkDeviceSize instancesBufferSize = sizeof(VkAccelerationStructureInstanceKHR) * instanceCount;
 
     // Buffer for instance data
-    Buffer instancesBuffer(_ctx);
-    instancesBuffer.initialize(
+    Buffer instancesBuffer(
+        _ctx,
         instancesBufferSize,
         VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -193,8 +190,8 @@ void TLAS::update(const std::vector<VkAccelerationStructureInstanceKHR>& instanc
         &accelerationStructureBuildSizesInfo);
 
     // Create scratch buffer for update
-    Buffer scratchBuffer(_ctx);
-    scratchBuffer.initialize(
+    Buffer scratchBuffer(
+        _ctx,
         accelerationStructureBuildSizesInfo.updateScratchSize,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,

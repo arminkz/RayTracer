@@ -1,18 +1,8 @@
 #include "Buffer.h"
 #include "VulkanHelper.h"
 
-Buffer::Buffer(std::shared_ptr<VulkanContext> ctx)
+Buffer::Buffer(std::shared_ptr<VulkanContext> ctx, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, bool needsDeviceAddress)
     : _ctx(std::move(ctx)), _mappedMemory(nullptr)
-{
-}
-
-Buffer::~Buffer()
-{
-    spdlog::debug("Buffer destructor called");
-    destroy();
-}
-
-void Buffer::initialize(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, bool needsDeviceAddress)
 {
     // Create the buffer and allocate memory for it
     VulkanHelper::createBuffer(_ctx, size, usage, properties, needsDeviceAddress, _buffer, _bufferMemory);
@@ -26,6 +16,12 @@ void Buffer::initialize(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPro
     if (needsDeviceAddress) {
         _deviceAddress = VulkanHelper::getBufferDeviceAddress(_ctx, _buffer);
     }
+}
+
+Buffer::~Buffer()
+{
+    spdlog::debug("Buffer destructor called");
+    destroy();
 }
 
 void Buffer::destroy()

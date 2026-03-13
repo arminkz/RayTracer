@@ -709,12 +709,10 @@ void RayTracingScene::createInstanceDataBuffer() {
 
     // Create buffer to hold instance data
     const VkDeviceSize bufferSize = sizeof(InstanceData) * instanceDataArray.size();
-    _instanceDataBuffer = std::make_unique<Buffer>(_ctx);
-    _instanceDataBuffer->initialize(
+    _instanceDataBuffer = std::make_unique<Buffer>(_ctx,
         bufferSize,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        false
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
 
     // Copy instance data to GPU
@@ -748,11 +746,10 @@ void RayTracingScene::createUniformBuffers() {
 
     // Create one uniform buffer per frame in flight
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        _uniformBuffers[i] = std::make_unique<Buffer>(_ctx);
-        _uniformBuffers[i]->initialize(sizeof(UniformData),
+        _uniformBuffers[i] = std::make_unique<Buffer>(_ctx,
+            sizeof(UniformData),
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            false
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
     }
 }
@@ -805,14 +802,12 @@ void RayTracingScene::createShaderBindingTables() {
 	const VkMemoryPropertyFlags memoryPropsFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
     // Raygen shader (group 0)
-    raygenShaderBindingTable = std::make_unique<Buffer>(_ctx);
-    raygenShaderBindingTable->initialize(handleSizeAligned, bufferUsageFlags, memoryPropsFlags, true);
+    raygenShaderBindingTable = std::make_unique<Buffer>(_ctx, handleSizeAligned, bufferUsageFlags, memoryPropsFlags, true);
     raygenShaderBindingTable->copyData(shaderHandleStorage.data() + 0*handleSizeAligned, handleSize);
 
     // Miss shaders (groups 1 and 2: primary miss and shadow miss)
     const uint32_t missShaderCount = 2;
-    missShaderBindingTable = std::make_unique<Buffer>(_ctx);
-    missShaderBindingTable->initialize(missShaderCount * handleSizeAligned, bufferUsageFlags, memoryPropsFlags, true);
+    missShaderBindingTable = std::make_unique<Buffer>(_ctx, missShaderCount * handleSizeAligned, bufferUsageFlags, memoryPropsFlags, true);
 
     // Copy each miss shader handle individually with proper alignment
     for (uint32_t i = 0; i < missShaderCount; i++) {
@@ -824,8 +819,7 @@ void RayTracingScene::createShaderBindingTables() {
     }
 
     // Hit shader (group 3)
-    hitShaderBindingTable = std::make_unique<Buffer>(_ctx);
-    hitShaderBindingTable->initialize(handleSizeAligned, bufferUsageFlags, memoryPropsFlags, true);
+    hitShaderBindingTable = std::make_unique<Buffer>(_ctx, handleSizeAligned, bufferUsageFlags, memoryPropsFlags, true);
     hitShaderBindingTable->copyData(shaderHandleStorage.data() + 3*handleSizeAligned, handleSize);
 
     spdlog::info("Shader binding tables created successfully 1 raygen, {} miss shaders, 1 hit shader", missShaderCount);

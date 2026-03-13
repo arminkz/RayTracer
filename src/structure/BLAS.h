@@ -9,16 +9,15 @@
 
 class BLAS {
 public:
-    BLAS(std::shared_ptr<VulkanContext> ctx);
+    BLAS(std::shared_ptr<VulkanContext> ctx, const DeviceMesh& dmesh);
     ~BLAS();
 
-    void initialize(const DeviceMesh& dmesh);
     uint64_t getDeviceAddress() const { return _deviceAddress; }
 
 private:
     std::shared_ptr<VulkanContext> _ctx;
 
-    Buffer _asBuffer;
+    std::unique_ptr<Buffer> _asBuffer;
     VkAccelerationStructureKHR _handle = VK_NULL_HANDLE;
     uint64_t _deviceAddress = 0;
     

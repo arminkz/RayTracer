@@ -8,10 +8,9 @@
 
 class TLAS {
 public:
-    TLAS(std::shared_ptr<VulkanContext> ctx);
+    TLAS(std::shared_ptr<VulkanContext> ctx, const std::vector<VkAccelerationStructureInstanceKHR>& instances);
     ~TLAS();
 
-    void initialize(const std::vector<VkAccelerationStructureInstanceKHR>& instances);
     void update(const std::vector<VkAccelerationStructureInstanceKHR>& instances);
 
     VkWriteDescriptorSetAccelerationStructureKHR getDescriptorInfo() const;
@@ -19,7 +18,7 @@ public:
 private:
     std::shared_ptr<VulkanContext> _ctx;
 
-    Buffer _asBuffer;
+    std::unique_ptr<Buffer> _asBuffer;
     VkAccelerationStructureKHR _handle = VK_NULL_HANDLE;
     uint64_t _deviceAddress = 0;
 };

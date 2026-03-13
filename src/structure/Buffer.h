@@ -6,10 +6,9 @@
 class Buffer
 {
 public:
-    Buffer(std::shared_ptr<VulkanContext> ctx);
+    Buffer(std::shared_ptr<VulkanContext> ctx, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, bool needsDeviceAddress = false);
     ~Buffer();
 
-    void initialize(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, bool needsDeviceAddress = false);
     void destroy();
 
     VkBuffer getBuffer() const { return _buffer; }

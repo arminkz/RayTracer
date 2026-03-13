@@ -2,16 +2,8 @@
 #include "Buffer.h"
 #include "VulkanRT.h"
 
-BLAS::BLAS(std::shared_ptr<VulkanContext> ctx)
-    : _ctx(std::move(ctx)), _asBuffer(_ctx)
-{
-}
-
-BLAS::~BLAS()
-{
-}
-
-void BLAS::initialize(const DeviceMesh& dmesh)
+BLAS::BLAS(std::shared_ptr<VulkanContext> ctx, const DeviceMesh& dmesh)
+    : _ctx(std::move(ctx))
 {
     // Get mesh properties
     const uint32_t vertexCount = dmesh.getVertexCount();
@@ -61,26 +53,27 @@ void BLAS::initialize(const DeviceMesh& dmesh)
     //     true,
     //     _buffer, _bufferMemory);
 
-    _asBuffer.initialize(
+    _asBuffer = std::make_unique<Buffer>(
+        _ctx,
         accelerationStructureBuildSizesInfo.accelerationStructureSize,
         VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         true);
 
     // Get the device address of the acceleration structure buffer
-    _deviceAddress = _asBuffer.getDeviceAddress();
+    _deviceAddress = _asBuffer->getDeviceAddress();
 
     // Create the bottom level acceleration structure
     VkAccelerationStructureCreateInfoKHR accelerationStructureCreateInfo{};
 	accelerationStructureCreateInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
-	accelerationStructureCreateInfo.buffer = _asBuffer.getBuffer();
+	accelerationStructureCreateInfo.buffer = _asBuffer->getBuffer();
 	accelerationStructureCreateInfo.size = accelerationStructureBuildSizesInfo.accelerationStructureSize;
 	accelerationStructureCreateInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
 	vkrt::vkCreateAccelerationStructureKHR(_ctx->device, &accelerationStructureCreateInfo, nullptr, &_handle);
 
     // Create scratch buffer
-    Buffer scratchBuffer(_ctx);
-    scratchBuffer.initialize(
+    Buffer scratchBuffer(
+        _ctx,
         accelerationStructureBuildSizesInfo.buildScratchSize,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -116,4 +109,8 @@ void BLAS::initialize(const DeviceMesh& dmesh)
 
     // Cleanup scratch buffer
     scratchBuffer.destroy();
+}
+
+BLAS::~BLAS()
+{
 }
