@@ -36,4 +36,6 @@ private:
 
     void createDescriptorPool();
     void createRenderPass(VkFormat swapChainImageFormat);
+
+    void loadFonts();
 };

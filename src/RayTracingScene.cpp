@@ -1,5 +1,6 @@
 #include "RayTracingScene.h"
 #include "VulkanHelper.h"
+#include "gui/FontAwesome.h"
 #include "structure/Buffer.h"
 #include "structure/TLAS.h"
 #include "structure/StorageImage.h"
@@ -314,14 +315,14 @@ void RayTracingScene::createShaderBindingTables() {
 void RayTracingScene::buildUI() {
     ImGui::Begin("Scene Controls");
 
-    ImGui::Checkbox("Pause", &_isPaused);
-    ImGui::Checkbox("Camera Orbit", &_cameraOrbiting);
+    ImGui::Checkbox(_isPaused ? ICON_FA_PLAY " Resume" : ICON_FA_PAUSE " Pause", &_isPaused);
+    ImGui::Checkbox(ICON_FA_SYNC_ALT " Camera Orbit", &_cameraOrbiting);
 
     ImGui::Separator();
 
-    if (ImGui::Button("Save State")) saveSceneState("scene_state.txt");
+    if (ImGui::Button(ICON_FA_SAVE " Save State")) saveSceneState("scene_state.txt");
     ImGui::SameLine();
-    if (ImGui::Button("Load State")) loadSceneState("scene_state.txt");
+    if (ImGui::Button(ICON_FA_FOLDER_OPEN " Load State")) loadSceneState("scene_state.txt");
 
     ImGui::End();
 }

@@ -1,5 +1,7 @@
 #include "GUI.h"
 #include "VulkanHelper.h"
+#include "AssetPath.h"
+#include "gui/FontAwesome.h"
 
 
 GUI::GUI(std::shared_ptr<VulkanContext> ctx, SDL_Window* window, VkFormat swapChainImageFormat)
@@ -33,6 +35,8 @@ GUI::GUI(std::shared_ptr<VulkanContext> ctx, SDL_Window* window, VkFormat swapCh
     initInfo.PipelineInfoMain.MSAASamples       = VK_SAMPLE_COUNT_1_BIT;
 
     ImGui_ImplVulkan_Init(&initInfo);
+
+    loadFonts();
 
     spdlog::info("ImGui initialized.");
 }
@@ -156,4 +160,23 @@ void GUI::recordToCommandBuffer(VkCommandBuffer commandBuffer, VkFramebuffer fra
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
     vkCmdEndRenderPass(commandBuffer);
+}
+
+void GUI::loadFonts()
+{
+	ImGuiIO& io = ImGui::GetIO();
+
+	ImFontConfig cfg;
+	std::copy_n("Lato", 5, cfg.Name);
+	io.Fonts->AddFontFromFileTTF(AssetPath::getInstance()->get("fonts/Lato-Regular.ttf").c_str(), 15.0f, &cfg);
+
+	static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+	cfg.MergeMode = true;
+	cfg.PixelSnapH = true;
+	cfg.GlyphMinAdvanceX = 20.0f;
+	cfg.GlyphMaxAdvanceX = 20.0f;
+	std::copy_n("FontAwesome", 12, cfg.Name);
+
+	io.Fonts->AddFontFromFileTTF(AssetPath::getInstance()->get("fonts/fa-regular-400.ttf").c_str(), 13.0f, &cfg, icons_ranges);
+	io.Fonts->AddFontFromFileTTF(AssetPath::getInstance()->get("fonts/fa-solid-900.ttf").c_str(), 13.0f, &cfg, icons_ranges);
 }

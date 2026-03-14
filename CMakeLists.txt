@@ -42,6 +42,7 @@ file(GLOB SOURCES
     src/loader/*
     src/structure/*
     src/geometry/*
+    src/gui/*
 )
 
 # ImGui sources
