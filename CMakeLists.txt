@@ -44,9 +44,22 @@ file(GLOB SOURCES
     src/geometry/*
 )
 
+# ImGui sources
+set(IMGUI_SOURCES
+    external/imgui/imgui.cpp
+    external/imgui/imgui_draw.cpp
+    external/imgui/imgui_tables.cpp
+    external/imgui/imgui_widgets.cpp
+    external/imgui/backends/imgui_impl_sdl3.cpp
+    external/imgui/backends/imgui_impl_vulkan.cpp
+)
+list(APPEND SOURCES ${IMGUI_SOURCES})
+
 # Handle .h files
 set(INCLUDES ${INCLUDES} src)
 set(INCLUDES ${INCLUDES} external/tinyobjloader)
+set(INCLUDES ${INCLUDES} external/imgui)
+set(INCLUDES ${INCLUDES} external/imgui/backends)
 
 # Set asset directory definition
 add_compile_definitions("ASSET_DIR=${CMAKE_SOURCE_DIR}/assets/")

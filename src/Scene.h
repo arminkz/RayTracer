@@ -6,17 +6,16 @@
 class Scene
 {
 public:
-    Scene(std::shared_ptr<VulkanContext> ctx, std::shared_ptr<SwapChain> swapChain);
-    ~Scene();
+    Scene(std::shared_ptr<VulkanContext> ctx, std::shared_ptr<SwapChain> swapChain)
+        : _ctx(std::move(ctx)), _swapChain(std::move(swapChain)) {}
+    virtual ~Scene() = default;
 
-    // Update the scene (called every frame before drawing) (0 < currentImage < MAX_FRAMES_IN_FLIGHT)
-    virtual void update(uint32_t currentImage);
-
-    // Child classes should implement this method to create their own scene
-    virtual void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) = 0;
-
-    // Called when the swapchain is recreated (window resize)
+    virtual void update(uint32_t currentImage) { _currentFrame = currentImage; }
+    virtual void recordToCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) = 0;
     virtual void onSwapChainRecreated() {}
+
+    virtual VkImage getOutputImage() const { return VK_NULL_HANDLE; }
+    virtual VkExtent2D getOutputExtent() const { return {}; }
 
     // IO handling
     virtual void handleMouseClick(float mx, float my) = 0;
@@ -24,10 +23,11 @@ public:
     virtual void handleMouseWheel(float dy) = 0;
     virtual void handleKeyDown(int key, int scancode, int mods) = 0;
 
+    // Called each frame to build scene-specific ImGui controls
+    virtual void buildUI() {}
+
 protected:
     std::shared_ptr<VulkanContext> _ctx;
     std::shared_ptr<SwapChain> _swapChain;
-
-    // Current frame index
     uint32_t _currentFrame = 0;
 };

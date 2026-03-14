@@ -140,18 +140,7 @@ void RayTracingScene::update(uint32_t currentImage) {
 }
 
 
-void RayTracingScene::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t targetSwapImageIndex) {
-
-    // Begin Command buffer recording
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = 0;
-    beginInfo.pInheritanceInfo = nullptr;
-
-    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-        spdlog::error("Failed to begin recording command buffer!");
-        return;
-    }
+void RayTracingScene::recordToCommandBuffer(VkCommandBuffer commandBuffer, uint32_t targetSwapImageIndex) {
 
     // Setup the buffer regions pointing to the shaders in our shader binding tables
     const uint32_t handleSizeAligned = VulkanHelper::alignedSize(_rayTracingPipelineProperties.shaderGroupHandleSize, _rayTracingPipelineProperties.shaderGroupHandleAlignment);
@@ -197,74 +186,6 @@ void RayTracingScene::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_
         1
     );
 
-    // Make swap chain image ready for copy
-    VulkanHelper::transitionImageLayout(_ctx,
-        commandBuffer,
-        _swapChain->getSwapChainImages()[targetSwapImageIndex],
-        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
-        VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-    // Make storage image ready for blit (downsampling)
-    VulkanHelper::transitionImageLayout(_ctx,
-        commandBuffer,
-        _storageImage->getImage(),
-        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
-        VK_IMAGE_LAYOUT_GENERAL,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-
-    // Blit (downsample) 2x storage image to swapchain size with linear filtering
-    VkImageBlit blitRegion{};
-    blitRegion.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-    blitRegion.srcOffsets[0] = { 0, 0, 0 };
-    blitRegion.srcOffsets[1] = {
-        static_cast<int32_t>(_swapChain->getSwapChainExtent().width * _supersampleScale),
-        static_cast<int32_t>(_swapChain->getSwapChainExtent().height * _supersampleScale),
-        1
-    };
-    blitRegion.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-    blitRegion.dstOffsets[0] = { 0, 0, 0 };
-    blitRegion.dstOffsets[1] = {
-        static_cast<int32_t>(_swapChain->getSwapChainExtent().width),
-        static_cast<int32_t>(_swapChain->getSwapChainExtent().height),
-        1
-    };
-
-    vkCmdBlitImage(
-        commandBuffer,
-        _storageImage->getImage(),
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        _swapChain->getSwapChainImages()[targetSwapImageIndex],
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        1,
-        &blitRegion,
-        VK_FILTER_LINEAR  // Linear filtering for smooth downsampling
-    );
-
-
-    // Transition swap chain image back for presentation
-    VulkanHelper::transitionImageLayout(_ctx,
-        commandBuffer,
-        _swapChain->getSwapChainImages()[targetSwapImageIndex],
-        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
-    // Transition ray tracing output storage image back to general layout
-    VulkanHelper::transitionImageLayout(_ctx,
-        commandBuffer,
-        _storageImage->getImage(),
-        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        VK_IMAGE_LAYOUT_GENERAL);
-
-
-    // End the command buffer recording
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-        spdlog::error("Failed to record command buffer!");
-        return;
-    }
 }
 
 
@@ -388,6 +309,22 @@ void RayTracingScene::createShaderBindingTables() {
     spdlog::info("Shader binding tables created successfully 1 raygen, {} miss shaders, 1 hit shader", missShaderCount);
 }
 
+
+
+void RayTracingScene::buildUI() {
+    ImGui::Begin("Scene Controls");
+
+    ImGui::Checkbox("Pause", &_isPaused);
+    ImGui::Checkbox("Camera Orbit", &_cameraOrbiting);
+
+    ImGui::Separator();
+
+    if (ImGui::Button("Save State")) saveSceneState("scene_state.txt");
+    ImGui::SameLine();
+    if (ImGui::Button("Load State")) loadSceneState("scene_state.txt");
+
+    ImGui::End();
+}
 
 
 void RayTracingScene::handleMouseClick(float mx, float my) {

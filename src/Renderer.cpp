@@ -5,30 +5,27 @@
 Renderer::Renderer(std::shared_ptr<VulkanContext> ctx)
     : _ctx(std::move(ctx))
 {
-}
+    spdlog::info("Max Frames in flight: {}", MAX_FRAMES_IN_FLIGHT);
 
+    _swapChain = std::make_shared<SwapChain>(_ctx);
+    _scene = std::make_unique<RayTracingScene>(_ctx, _swapChain);
+    _gui = std::make_unique<GUI>(_ctx, _ctx->window, _swapChain->getSwapChainImageFormat());
+
+    createCommandBuffers();
+    createSyncObjects();
+    createFramebuffers();
+}
 
 Renderer::~Renderer() {
     // Wait for any unfinished GPU tasks
     vkDeviceWaitIdle(_ctx->device);
+    
+    destroySyncObjects();
+    destroyFramebuffers();
 }
-
-void Renderer::initialize() {
-    spdlog::info("Max Frames in flight: {}", MAX_FRAMES_IN_FLIGHT);
-
-    // Create swap chain
-    _swapChain = std::make_shared<SwapChain>(_ctx);
-
-    // Initialize Scene
-    _scene = std::make_unique<RayTracingScene>(_ctx, _swapChain);
-
-    createCommandBuffers();
-    createSyncObjects();
-}
-
 
 void Renderer::createCommandBuffers() {
-    // Allocate command buffer
+    // Allocate scene command buffers
     _commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
     VkCommandBufferAllocateInfo allocInfo{};
@@ -44,6 +41,30 @@ void Renderer::createCommandBuffers() {
     }
 }
 
+void Renderer::createFramebuffers() {
+    const auto& imageViews = _swapChain->getSwapChainImageViews();
+    VkExtent2D extent = _swapChain->getSwapChainExtent();
+    _framebuffers.resize(imageViews.size());
+    for (size_t i = 0; i < imageViews.size(); i++) {
+        VkFramebufferCreateInfo fbInfo{};
+        fbInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        fbInfo.renderPass      = _gui->getRenderPass();
+        fbInfo.attachmentCount = 1;
+        fbInfo.pAttachments    = &imageViews[i];
+        fbInfo.width           = extent.width;
+        fbInfo.height          = extent.height;
+        fbInfo.layers          = 1;
+        if (vkCreateFramebuffer(_ctx->device, &fbInfo, nullptr, &_framebuffers[i]) != VK_SUCCESS) {
+            spdlog::error("Renderer: Failed to create GUI framebuffer {}!", i);
+        }
+    }
+}
+
+void Renderer::destroyFramebuffers() {
+    for (auto fb : _framebuffers)
+        vkDestroyFramebuffer(_ctx->device, fb, nullptr);
+    _framebuffers.clear();
+}
 
 void Renderer::createSyncObjects() {
     _imageAvailableSemaphores.resize(_swapChain->getSwapChainImageCount());
@@ -71,43 +92,46 @@ void Renderer::createSyncObjects() {
     }
 }
 
+void Renderer::destroySyncObjects() {
+    for (auto sem : _imageAvailableSemaphores)
+        vkDestroySemaphore(_ctx->device, sem, nullptr);
+    for (auto sem : _renderFinishedSemaphores)
+        vkDestroySemaphore(_ctx->device, sem, nullptr);
+    for (auto fence : _inFlightFences)
+        vkDestroyFence(_ctx->device, fence, nullptr);
+    _imageAvailableSemaphores.clear();
+    _renderFinishedSemaphores.clear();
+    _inFlightFences.clear();
+}
+
 
 void Renderer::invalidate() {
     vkDeviceWaitIdle(_ctx->device);
     spdlog::info("Recreating swapchain after window resize.");
 
-    // Destroy semaphores — their count depends on swapchain image count, which may change
-    for (auto sem : _imageAvailableSemaphores)
-        vkDestroySemaphore(_ctx->device, sem, nullptr);
-    for (auto sem : _renderFinishedSemaphores)
-        vkDestroySemaphore(_ctx->device, sem, nullptr);
-    _imageAvailableSemaphores.clear();
-    _renderFinishedSemaphores.clear();
+    // Destroy semaphores/fences — their count depends on swapchain image count, which may change
+    destroySyncObjects();
 
     // Recreate swapchain with new window dimensions
     _swapChain->cleanupSwapChain();
     _swapChain->createSwapChain();
 
-    // Recreate semaphores for the (potentially new) image count
-    VkSemaphoreCreateInfo semaphoreInfo{};
-    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    _imageAvailableSemaphores.resize(_swapChain->getSwapChainImageCount());
-    _renderFinishedSemaphores.resize(_swapChain->getSwapChainImageCount());
-    for (int i = 0; i < _swapChain->getSwapChainImageCount(); i++) {
-        vkCreateSemaphore(_ctx->device, &semaphoreInfo, nullptr, &_imageAvailableSemaphores[i]);
-        vkCreateSemaphore(_ctx->device, &semaphoreInfo, nullptr, &_renderFinishedSemaphores[i]);
-    }
+    createSyncObjects();
 
     // Reset frame counters
     _frameCounter = 0;
     _imageCounter = 0;
 
-    // Notify scene to resize storage image and update descriptors
+    // Notify scene to resize; 
     _scene->onSwapChainRecreated();
+
+    // Recreate GUI framebuffers
+    destroyFramebuffers();
+    createFramebuffers();
 }
 
 
-void Renderer::drawFrame() {
+void Renderer::render() {
     // Wait for the previous frame to finish
     vkWaitForFences(_ctx->device, 1, &_inFlightFences[_frameCounter], VK_TRUE, UINT64_MAX);
 
@@ -127,14 +151,60 @@ void Renderer::drawFrame() {
     vkResetFences(_ctx->device, 1, &_inFlightFences[_frameCounter]);
     vkResetCommandBuffer(_commandBuffers[_frameCounter], 0);
 
+    // Build ImGui frame
+    _gui->beginFrame();
+    _gui->buildUI();
+    _scene->buildUI();
+
     // Update Scene
     _scene->update(_frameCounter);
 
-    // Record command buffer
-    // Some scene objects may need to know the image index for rendering. for example when using multiple framebuffers.
-    _scene->recordCommandBuffer(_commandBuffers[_frameCounter], imageIndex);
+    // Record everything into command buffer
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    vkBeginCommandBuffer(_commandBuffers[_frameCounter], &beginInfo);
 
-    // Submit the command buffer
+    VkCommandBuffer cb = _commandBuffers[_frameCounter];
+
+    _scene->recordToCommandBuffer(cb, imageIndex);
+
+    // Blit storage image → swapchain, then transition for ImGui render pass
+    VulkanHelper::transitionImageLayout(_ctx, cb,
+        _swapChain->getSwapChainImages()[imageIndex],
+        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    VulkanHelper::transitionImageLayout(_ctx, cb,
+        _scene->getOutputImage(),
+        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+        VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+    VkExtent2D srcExtent = _scene->getOutputExtent();
+    VkExtent2D dstExtent = _swapChain->getSwapChainExtent();
+    VkImageBlit blitRegion{};
+    blitRegion.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+    blitRegion.srcOffsets[1]  = { (int32_t)srcExtent.width, (int32_t)srcExtent.height, 1 };
+    blitRegion.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+    blitRegion.dstOffsets[1]  = { (int32_t)dstExtent.width, (int32_t)dstExtent.height, 1 };
+    vkCmdBlitImage(cb,
+        _scene->getOutputImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        _swapChain->getSwapChainImages()[imageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1, &blitRegion, VK_FILTER_LINEAR);
+
+    VulkanHelper::transitionImageLayout(_ctx, cb,
+        _swapChain->getSwapChainImages()[imageIndex],
+        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+    VulkanHelper::transitionImageLayout(_ctx, cb,
+        _scene->getOutputImage(),
+        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
+
+    _gui->recordToCommandBuffer(cb, _framebuffers[imageIndex], dstExtent);
+
+    vkEndCommandBuffer(_commandBuffers[_frameCounter]);
+
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -178,4 +248,43 @@ void Renderer::drawFrame() {
 
     _frameCounter = (_frameCounter + 1) % MAX_FRAMES_IN_FLIGHT;
     _imageCounter = (_imageCounter + 1) % _swapChain->getSwapChainImageCount();
+}
+
+
+void Renderer::handleEvent(SDL_Event* event) {
+    // Always forward to ImGui so it can update its input state
+    _gui->handleEvent(event);
+
+    // Mouse Events
+    // Only forward to the scene if ImGui is not consuming the input
+    if (!_gui->isCapturingMouse()) {
+        switch (event->type) {
+            case SDL_EVENT_MOUSE_MOTION:
+                // SDL3 motion events carry relative deltas and the current button mask
+                if (event->motion.state & SDL_BUTTON_LMASK)
+                    _scene->handleMouseDrag(event->motion.xrel, event->motion.yrel);
+                break;
+            case SDL_EVENT_MOUSE_BUTTON_DOWN:
+                if (event->button.button == SDL_BUTTON_LEFT)
+                    _scene->handleMouseClick(event->button.x, event->button.y);
+                break;
+            case SDL_EVENT_MOUSE_WHEEL:
+                _scene->handleMouseWheel(event->wheel.y);
+                break;
+            default:
+                break;
+        }
+    }
+
+    // Keyboard Events
+    // Only forward to the scene if ImGui is not consuming the input
+    if (!_gui->isCapturingKeyboard()) {
+        switch (event->type) {
+            case SDL_EVENT_KEY_DOWN:
+                _scene->handleKeyDown(event->key.key, event->key.scancode, event->key.mod);
+                break;
+            default:
+                break;
+        }
+    }
 }

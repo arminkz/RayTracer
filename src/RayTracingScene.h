@@ -19,13 +19,21 @@ public:
     ~RayTracingScene();
 
     void update(uint32_t currentImage) override;
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t targetSwapImageIndex) override;
+    void recordToCommandBuffer(VkCommandBuffer commandBuffer, uint32_t targetSwapImageIndex) override;
     void onSwapChainRecreated() override;
 
     void handleMouseClick(float mx, float my) override;
     void handleMouseDrag(float dx, float dy) override;
     void handleMouseWheel(float dy) override;
     void handleKeyDown(int key, int scancode, int mods) override;
+
+    VkImage getOutputImage() const override { return _storageImage->getImage(); }
+    VkExtent2D getOutputExtent() const override {
+        return { _swapChain->getSwapChainExtent().width  * _supersampleScale,
+                 _swapChain->getSwapChainExtent().height * _supersampleScale };
+    }
+
+    void buildUI() override;
 
 private:
 

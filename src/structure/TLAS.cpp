@@ -137,6 +137,9 @@ TLAS::TLAS(std::shared_ptr<VulkanContext> ctx, const std::vector<VkAccelerationS
 
 TLAS::~TLAS()
 {
+    if (_handle != VK_NULL_HANDLE) {
+        vkrt::vkDestroyAccelerationStructureKHR(_ctx->device, _handle, nullptr);
+    }
 }
 
 void TLAS::update(const std::vector<VkAccelerationStructureInstanceKHR>& instances)

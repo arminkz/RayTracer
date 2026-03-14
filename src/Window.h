@@ -14,19 +14,6 @@ protected:
 
     static bool eventCallback(void *userdata, SDL_Event *event);
 
-    // Event handlers
-    void onWindowResized(int width, int height);
-    void onMouseMotion(float x, float y);
-    void onMouseButtonDown(int button, float x, float y);
-    void onMouseButtonUp(int button, float x, float y);
-    void onMouseWheel(float x, float y);
-    void onKeyDown(int key, int scancode, int modifiers);
-
-private:
-    bool _isMouseDown = false;
-    int  _lastMouseX = 0;
-    int  _lastMouseY = 0;
-
 public:
     Window();
     ~Window();

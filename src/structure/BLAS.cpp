@@ -113,4 +113,7 @@ BLAS::BLAS(std::shared_ptr<VulkanContext> ctx, const DeviceMesh& dmesh)
 
 BLAS::~BLAS()
 {
+    if (_handle != VK_NULL_HANDLE) {
+        vkrt::vkDestroyAccelerationStructureKHR(_ctx->device, _handle, nullptr);
+    }
 }
