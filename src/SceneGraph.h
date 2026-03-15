@@ -27,17 +27,23 @@ public:
 
     SceneGraph(std::shared_ptr<VulkanContext> ctx);
 
+    // Scene object management — called by SceneContent subclasses
+    const std::vector<SceneObject>& getObjects() const { return _sceneObjects; }
+    void addObject(const SceneObject& obj) { _sceneObjects.push_back(obj); _instanceDataDirty = true; }
+    void clearObjects() { _sceneObjects.clear(); _instanceDataDirty = true; }
+
+    // True when objects changed and the GPU instance data buffer must be re-uploaded
+    bool needsInstanceRebuild() const { return _instanceDataDirty; }
+    void clearInstanceRebuildFlag() { _instanceDataDirty = false; }
     std::vector<VkAccelerationStructureInstanceKHR> buildInstanceList() const;
     std::vector<InstanceData> buildInstanceDataArray() const;
 
-    const std::vector<SceneObject>& getObjects() const { return _sceneObjects; }
-
 private:
+    bool _instanceDataDirty = false;
     std::shared_ptr<VulkanContext> _ctx;
 
     std::unordered_map<std::string, GeometryTemplate> _geometryTemplates;
     std::vector<SceneObject> _sceneObjects;
 
     void createGeometryTemplates();
-    void createSceneObjects();
 };

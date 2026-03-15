@@ -7,6 +7,8 @@
 #include "DescriptorSet.h"
 #include "AssetPath.h"
 #include "VulkanRT.h"
+#include "scenes/TeapotScene.h"
+#include "scenes/SpheresScene.h"
 
 
 RayTracingScene::RayTracingScene(std::shared_ptr<VulkanContext> ctx, std::shared_ptr<SwapChain> swapChain)
@@ -48,8 +50,13 @@ RayTracingScene::RayTracingScene(std::shared_ptr<VulkanContext> ctx, std::shared
     cameraParams.initialElevation = -0.6f;
     _camera = std::make_unique<TurnTableCamera>(cameraParams);
 
-    // Create Scene Graph (geometry templates + scene objects)
+    // Create Scene Graph (geometry templates only)
     _sceneGraph = std::make_unique<SceneGraph>(_ctx);
+
+    // Load initial scene content
+    _sceneContent = std::make_unique<TeapotScene>(_ctx, *_sceneGraph);
+    _sceneContent->onLoad();
+    _sceneGraph->clearInstanceRebuildFlag(); // buffer is built right below
 
     // Create Top Level Acceleration Structure
     createTLAS();
@@ -126,9 +133,17 @@ void RayTracingScene::update(uint32_t currentImage) {
     _ubo.lightU = glm::normalize(glm::cross(up, lightDir));
     _ubo.lightV = glm::normalize(glm::cross(lightDir, _ubo.lightU));
 
-    //Update light sphere position and TLAS
-    // _sceneObjects[_lightSphereIndex].transform = glm::translate(glm::mat4(1.0f), _ubo.lightPosition);
-    // _sceneObjects[_lightSphereIndex].transform = glm::scale(_sceneObjects[_lightSphereIndex].transform, glm::vec3(0.5f));
+    // Per-scene animations
+    _sceneContent->update(elapsedSeconds);
+
+    // Re-upload instance data if any scene modified the objects (e.g. material change)
+    if (_sceneGraph->needsInstanceRebuild()) {
+        _sceneGraph->clearInstanceRebuildFlag();
+        vkDeviceWaitIdle(_ctx->device);
+        auto instanceDataArray = _sceneGraph->buildInstanceDataArray();
+        _instanceDataBuffer->copyData(instanceDataArray.data(), sizeof(InstanceData) * instanceDataArray.size());
+    }
+
     updateTLAS();
 
     // Update uniform buffer
@@ -196,6 +211,29 @@ void RayTracingScene::createTLAS() {
 
 void RayTracingScene::updateTLAS() {
     _tlas->update(_sceneGraph->buildInstanceList());
+}
+
+void RayTracingScene::switchScene(std::unique_ptr<SceneContent> newScene)
+{
+    vkDeviceWaitIdle(_ctx->device);
+    
+    // Unload old scene
+    _sceneContent->onUnload();
+    _sceneGraph->clearObjects();
+
+    // Load new scene
+    newScene->onLoad();
+    _sceneGraph->clearInstanceRebuildFlag(); // buffer is rebuilt below
+    _tlas.reset();
+
+    createTLAS();
+    _instanceDataBuffer.reset();
+    createInstanceDataBuffer();
+    createDescriptorSets();
+
+    // Update pointer
+    _sceneContent = std::move(newScene);
+    spdlog::info("Scene switched successfully.");
 }
 
 void RayTracingScene::createInstanceDataBuffer() {
@@ -311,18 +349,35 @@ void RayTracingScene::createShaderBindingTables() {
 }
 
 
-
 void RayTracingScene::buildUI() {
     ImGui::Begin("Scene Controls");
 
-    ImGui::Checkbox(_isPaused ? ICON_FA_PLAY " Resume" : ICON_FA_PAUSE " Pause", &_isPaused);
-    ImGui::Checkbox(ICON_FA_SYNC_ALT " Camera Orbit", &_cameraOrbiting);
+    ImGui::Text(ICON_FA_TACHOMETER_ALT " %.1f FPS  (%.2f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
 
     ImGui::Separator();
 
-    if (ImGui::Button(ICON_FA_SAVE " Save State")) saveSceneState("scene_state.txt");
-    ImGui::SameLine();
-    if (ImGui::Button(ICON_FA_FOLDER_OPEN " Load State")) loadSceneState("scene_state.txt");
+    ImGui::Text(ICON_FA_CAMERA " Camera");
+    ImGui::Indent(16.0f);
+        ImGui::Checkbox(ICON_FA_SYNC_ALT " Orbit Camera (O)", &_cameraOrbiting);
+        if (ImGui::Button(ICON_FA_SAVE " Save State (S)")) saveSceneState("scene_state.txt");
+        ImGui::SameLine();
+        if (ImGui::Button(ICON_FA_FOLDER_OPEN " Load State (L)")) loadSceneState("scene_state.txt");
+    ImGui::Unindent(16.0f);
+
+    ImGui::Separator();
+
+    // Scene selector
+    ImGui::Text(ICON_FA_FILM " Scene");
+    ImGui::Indent(16.0f);
+        const char* scenes[] = { "Teapot", "Spheres" };
+        if (ImGui::Combo("##scene", &_sceneCombo, scenes, 2)) {
+            if (_sceneCombo == 0) switchScene(std::make_unique<TeapotScene>(_ctx, *_sceneGraph));
+            else                  switchScene(std::make_unique<SpheresScene>(_ctx, *_sceneGraph));
+        }
+    ImGui::Unindent(16.0f);
+
+    // Scene-specific controls
+    _sceneContent->buildUI();
 
     ImGui::End();
 }

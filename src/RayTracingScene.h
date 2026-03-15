@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include "stdafx.h"
 #include "VulkanContext.h"
@@ -10,6 +10,7 @@
 #include "RayTracingPipeline.h"
 #include "DescriptorSet.h"
 #include "TurnTableCamera.h"
+#include "scenes/SceneContent.h"
 
 
 class RayTracingScene : public Scene
@@ -36,9 +37,6 @@ public:
     void buildUI() override;
 
 private:
-
-    // void createBottomLevelAccelerationStructures();
-    // void createTopLevelAccelerationStructure();
 
     // Physical Device Properties / Features
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR _rayTracingPipelineProperties{};
@@ -87,6 +85,11 @@ private:
 
     // Scene graph (geometry templates + scene objects)
     std::unique_ptr<SceneGraph> _sceneGraph;
+
+    // Active scene content (geometry, animations, per-scene UI)
+    std::unique_ptr<SceneContent> _sceneContent;
+    int _sceneCombo = 0;
+    void switchScene(std::unique_ptr<SceneContent> newScene);
 
     // Top Level Acceleration Structure (TLAS)
     std::unique_ptr<TLAS> _tlas;

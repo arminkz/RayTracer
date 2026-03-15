@@ -86,8 +86,6 @@ void Window::startRenderingLoop()
         }
 
         if(!isPaused) _renderer->render(); // Call the renderer's render method
-
-        SDL_Delay(16); // Simulate a frame delay (60 FPS)
     }
 }
 

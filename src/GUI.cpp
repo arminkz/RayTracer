@@ -13,7 +13,7 @@ GUI::GUI(std::shared_ptr<VulkanContext> ctx, SDL_Window* window, VkFormat swapCh
     // Setup ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGui::StyleColorsDark();
+    initializeStyles();
 
     // SDL3 backend
     ImGui_ImplSDL3_InitForVulkan(_window);
@@ -160,6 +160,13 @@ void GUI::recordToCommandBuffer(VkCommandBuffer commandBuffer, VkFramebuffer fra
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
     vkCmdEndRenderPass(commandBuffer);
+}
+
+void GUI::initializeStyles() {
+    ImGui::StyleColorsDark();
+
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.ItemSpacing = ImVec2(8.0f, 8.0f);
 }
 
 void GUI::loadFonts()
