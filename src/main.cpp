@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Window.h"
+#include "core/Window.h"
 
 
 int main(int argc, char* argv[]) {

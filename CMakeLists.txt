@@ -39,11 +39,13 @@ set(LIBRARIES
 file(GLOB SOURCES
     src/*
     src/utils/*
-    src/loader/*
-    src/structure/*
     src/geometry/*
+    src/core/*
+    src/vulkan/*
+    src/vulkan/resources/*
+    src/scene/*
+    src/scene/content/*
     src/gui/*
-    src/scenes/*
 )
 
 # ImGui sources

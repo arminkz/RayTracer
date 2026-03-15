@@ -1,6 +1,6 @@
 #pragma once
-#include "../stdafx.h"
-#include "HostMesh.h"
+#include "stdafx.h"
+#include "geometry/HostMesh.h"
 
 namespace MeshFactory {
 
@@ -17,4 +17,4 @@ namespace MeshFactory {
     HostMesh createAnnulusMesh(float innerRadius, float outerRadius, int segments);
     HostMesh createQuadMesh(float width, float height, const glm::vec3& normal = glm::vec3(0.0f, 1.0f, 0.0f), const glm::vec3& origin = glm::vec3(0.0f), bool twoSided = false);
     HostMesh createCubeMesh(float width, float height, float depth);
-} 
+}

@@ -1,6 +1,6 @@
-#include "MeshFactory.h"
-#include "Vertex.h"
-#include "HostMesh.h"
+#include "geometry/MeshFactory.h"
+#include "geometry/Vertex.h"
+#include "geometry/HostMesh.h"
 
 namespace MeshFactory {
 
@@ -12,9 +12,6 @@ namespace MeshFactory {
         Vertex northPole;
         northPole.pos = { 0.0f, 0.0f, radius };
         northPole.normal = glm::normalize(northPole.pos);
-        // northPole.color = glm::vec4(1.f);
-        // northPole.texCoord = { 0.5f, 0.0f };
-        // northPole.tangent = glm::vec3(1.0f, 0.0f, 0.0f);
         mesh.vertices.push_back(northPole);
 
         // Generate intermediate ring vertices (excluding poles)
@@ -38,9 +35,6 @@ namespace MeshFactory {
                     radius * cosTheta
                 };
                 vert.normal = glm::normalize(vert.pos);
-                // vert.color = glm::vec4(1.f);
-                // vert.texCoord = { u, v };
-                // vert.tangent = glm::normalize(glm::vec3(-sinPhi, cosPhi, 0.0));
                 mesh.vertices.push_back(vert);
             }
         }
@@ -49,9 +43,6 @@ namespace MeshFactory {
         Vertex southPole;
         southPole.pos = { 0.0f, 0.0f, -radius };
         southPole.normal = glm::normalize(southPole.pos);
-        // southPole.color = glm::vec4(1.f);
-        // southPole.texCoord = { 0.5f, 1.0f };
-        // southPole.tangent = glm::vec3(1.0f, 0.0f, 0.0f);
         mesh.vertices.push_back(southPole);
 
         // Generate indices
@@ -257,9 +248,6 @@ namespace MeshFactory {
                 Vertex vert;
                 vert.pos = segmentCenter + offset;
                 vert.normal = glm::normalize(offset);
-                // vert.color = glm::vec4(1.f);
-                // vert.texCoord = { static_cast<float>(i) / segments, static_cast<float>(j) / tubeSegments };
-                // vert.tangent = glm::normalize(glm::vec3(-std::sin(segmentAngle), 0.0f, std::cos(segmentAngle)));
                 mesh.vertices.push_back(vert);
             }
         }
@@ -295,7 +283,6 @@ namespace MeshFactory {
         mesh.vertices.push_back(apex);
 
         // Base circle vertices with smooth normals
-        // The normal at a base point should point outward and upward at the cone surface angle
         for (int i = 0; i <= segments; ++i) {
             float angle = i * angleStep;
             float x = baseRadius * std::cos(angle);
@@ -303,8 +290,6 @@ namespace MeshFactory {
 
             Vertex baseVertex;
             baseVertex.pos = { x, 0.0f, z };
-            // Smooth normal for cone: perpendicular to the cone surface
-            // Points outward (x, z direction) and upward
             baseVertex.normal = glm::normalize(glm::vec3(x, baseRadius / height, z));
             mesh.vertices.push_back(baseVertex);
         }
@@ -449,9 +434,7 @@ namespace MeshFactory {
         float angleStep = 2.f * glm::pi<float>() / float(sides);
         float halfHeight = height * 0.5f;
 
-        // -----------------------------
         // SIDE FACES (flat normals)
-        // -----------------------------
         for (int i = 0; i < sides; ++i)
         {
             int next = (i + 1) % sides;
@@ -480,9 +463,7 @@ namespace MeshFactory {
             });
         }
 
-        // -----------------------------
         // CAPS (optional)
-        // -----------------------------
         if (capped)
         {
             // top center
@@ -656,19 +637,11 @@ namespace MeshFactory {
             // Outer vertex
             Vertex outerVertex;
             outerVertex.pos = { cosA * outerRadius, 0.0f, sinA * outerRadius };
-            // outerVertex.color = glm::vec4(1.f);
-            // outerVertex.texCoord = {  1.0f, static_cast<float>(i) / segments };
-            // outerVertex.normal = glm::vec3(0, 1, 0);
-            // outerVertex.tangent = glm::vec3(-sinA, 0.0f, cosA); // Tangent is perpendicular to the normal
             mesh.vertices.push_back(outerVertex);
 
             // Inner vertex
             Vertex innerVertex;
             innerVertex.pos = { cosA * innerRadius, 0.0f, sinA * innerRadius };
-            // innerVertex.color = glm::vec4(1.f);
-            // innerVertex.texCoord = { 0.0f, static_cast<float>(i) / segments };
-            // innerVertex.normal = glm::vec3(0, 1, 0);
-            // innerVertex.tangent = glm::vec3(-sinA, 0.0f, cosA); // Tangent is perpendicular to the normal
             mesh.vertices.push_back(innerVertex);
 
         }
@@ -711,7 +684,6 @@ namespace MeshFactory {
         glm::vec3 n = glm::normalize(normal);
 
         // Create a coordinate system from the normal
-        // Choose an arbitrary vector that's not parallel to the normal
         glm::vec3 up = glm::abs(n.y) < 0.999f ? glm::vec3(0.0f, 1.0f, 0.0f) : glm::vec3(1.0f, 0.0f, 0.0f);
 
         // Create two perpendicular vectors in the plane of the quad
@@ -805,10 +777,6 @@ namespace MeshFactory {
         for (const auto& vertex : vertices) {
             Vertex v;
             v.pos = vertex;
-            // v.color = {1.0f,1.0f,1.0f,1.0f}; // Default color (white)
-            // v.texCoord = {0.0f, 0.0f};       // Default texture coordinates
-            // v.normal = {0.0f, 0.0f, 0.0f};   // Default normal (to be calculated later)
-            // v.tangent = {0.0f, 0.0f, 0.0f};  // Default tangent (to be calculated later)
             mesh.vertices.push_back(v);
         }
 

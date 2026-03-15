@@ -1,5 +1,5 @@
-#include "DeviceMesh.h"
-#include "../VulkanHelper.h"
+#include "geometry/DeviceMesh.h"
+#include "vulkan/VulkanHelper.h"
 
 DeviceMesh::DeviceMesh(std::shared_ptr<VulkanContext> ctx, const HostMesh& mesh, const VkTransformMatrixKHR& transform)
     : _ctx(ctx), _vertexCount(0), _indexCount(0)

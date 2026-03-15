@@ -1,8 +1,8 @@
 #pragma once
-#include "../stdafx.h"
-#include "../VulkanContext.h"
-#include "../structure/Buffer.h"
-#include "HostMesh.h"
+#include "stdafx.h"
+#include "vulkan/VulkanContext.h"
+#include "vulkan/resources/Buffer.h"
+#include "geometry/HostMesh.h"
 
 // Mesh representation on GPU
 class DeviceMesh

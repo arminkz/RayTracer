@@ -1,4 +1,4 @@
-#include "Vertex.h"
+#include "geometry/Vertex.h"
 
 
 bool Vertex::operator==(const Vertex& other) const {
