@@ -45,10 +45,8 @@ private:
     void createSyncObjects();
     void destroySyncObjects();
 
-
     uint32_t _frameCounter = 0;
     uint32_t _imageCounter = 0;
-
 
     // Called when the window is resized
     void invalidate();

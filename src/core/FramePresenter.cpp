@@ -122,7 +122,7 @@ void FramePresenter::invalidate() {
     _frameCounter = 0;
     _imageCounter = 0;
 
-    // Notify scene to resize;
+    // Notify renderer to resize;
     _renderer->onSwapChainRecreated();
 
     // Recreate GUI framebuffers

@@ -1,6 +1,8 @@
 #pragma once
 #include "stdafx.h"
 
+// TODO: Does this belong to vulkan package?
+
 // Instance data stored on GPU, accessible by shaders via buffer device address
 struct InstanceData {
     uint64_t vertexBufferAddress;  // Device address of vertex buffer
