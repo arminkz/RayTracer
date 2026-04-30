@@ -9,6 +9,7 @@
 #include "vulkan/VulkanRT.h"
 #include "scene/content/TeapotScene.h"
 #include "scene/content/SpheresScene.h"
+#include "scene/content/GlassAndSphereScene.h"
 
 
 RayTracingRenderer::RayTracingRenderer(std::shared_ptr<VulkanContext> ctx, std::shared_ptr<SwapChain> swapChain)
@@ -369,10 +370,11 @@ void RayTracingRenderer::buildUI() {
     // Scene selector
     ImGui::Text(ICON_FA_FILM " Scene");
     ImGui::Indent(16.0f);
-        const char* scenes[] = { "Teapot", "Spheres" };
-        if (ImGui::Combo("##scene", &_sceneCombo, scenes, 2)) {
-            if (_sceneCombo == 0) switchScene(std::make_unique<TeapotScene>(_ctx, *_sceneGraph));
-            else                  switchScene(std::make_unique<SpheresScene>(_ctx, *_sceneGraph));
+        const char* scenes[] = { "Teapot", "Spheres", "Glass and Sphere" };
+        if (ImGui::Combo("##scene", &_sceneCombo, scenes, 3)) {
+            if      (_sceneCombo == 0) switchScene(std::make_unique<TeapotScene>(_ctx, *_sceneGraph));
+            else if (_sceneCombo == 1) switchScene(std::make_unique<SpheresScene>(_ctx, *_sceneGraph));
+            else                       switchScene(std::make_unique<GlassAndSphereScene>(_ctx, *_sceneGraph));
         }
     ImGui::Unindent(16.0f);
 
