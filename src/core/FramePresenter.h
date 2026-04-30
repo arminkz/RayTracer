@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stdafx.h"
+#include "pch.h"
 #include "vulkan/VulkanHelper.h"
 #include "vulkan/SwapChain.h"
 #include "core/Renderer.h"

@@ -1,5 +1,5 @@
 #pragma once
-#include "stdafx.h"
+#include "pch.h"
 #include "geometry/Vertex.h"
 
 // Mesh representation on CPU

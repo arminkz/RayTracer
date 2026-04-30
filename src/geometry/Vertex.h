@@ -1,5 +1,5 @@
 #pragma once
-#include "stdafx.h"
+#include "pch.h"
 
 struct Vertex {
     glm::vec3 pos; float pad0; // Padding to align to 16 bytes

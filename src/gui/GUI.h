@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stdafx.h"
+#include "pch.h"
 #include "vulkan/VulkanContext.h"
 
 // Forward declare ImDrawData to avoid including imgui.h here

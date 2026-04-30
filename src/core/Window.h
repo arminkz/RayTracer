@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stdafx.h"
+#include "pch.h"
 #include "vulkan/VulkanContext.h"
 #include "core/FramePresenter.h"
 
