@@ -10,6 +10,7 @@
 
 #define SOFT_SHADOWS
 #define MAX_RECURSION_DEPTH 6
+#define MAX_TRANSMISSION_DEPTH 4
 
 
 // ------- Structs ------- //
@@ -135,7 +136,7 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
-// Normal Distribution Function (D)
+// Micro-facet Normal Distribution Function (D)
 float distributionGGX(vec3 N, vec3 H, float roughness)
 {
     float a = roughness * roughness;
@@ -237,6 +238,11 @@ void main()
 
     float shadowFactor;
 
+    // Skip shadow computation for highly transmissive materials — the glass
+    // lighting path (line ~544) uses specular * NdotL only and ignores shadowFactor.
+    if (instanceData.transparency > 0.5) {
+        shadowFactor = 1.0;
+    } else {
 #ifdef SOFT_SHADOWS
     // Random number generator
     uint rngState = gl_LaunchIDEXT.x
@@ -333,6 +339,7 @@ void main()
     );
     shadowFactor = shadowPayload;
 #endif
+    }
 
     // ------------------------
     // Direct Lighting & Base Color
@@ -392,10 +399,26 @@ void main()
     // Direct lighting is the light coming directly from the light source
     vec3 directLighting = (kD * baseColor / PI + specular) * lightColor * NdotL * shadowFactor;
 
+    // Hemisphere ambient — computed up here so the terminal-depth fallback can use it.
+    vec3 ambientUp = vec3(0.1, 0.1, 0.1) * 0.25; // Sky color
+    vec3 ambientDown = vec3(0.1, 0.1, 0.1) * 0.15; // Ground color
+    float hemiMix = smoothstep(-1.0, 1.0, worldNormal.y);
+    vec3 ambientLight = mix(ambientDown, ambientUp, hemiMix);
 
-    // Terminate recursion if max depth reached
-    if (incomingPayload.depth > MAX_RECURSION_DEPTH) {
-        incomingPayload.color = directLighting;
+    // Terminate recursion if max depth reached.
+    // Transparent materials branch (reflection + refraction), so cap them earlier
+    // to prevent exponential blow-up: 2^depth leaf traces per pixel otherwise.
+    // For transparent terminals, pretend the ray escaped and sample the sky
+    // gradient along its incoming direction — matches miss.rmiss so the cut-off
+    // looks like a clean miss instead of a dark blotch.
+    uint maxDepth = (instanceData.transparency > 0.0) ? MAX_TRANSMISSION_DEPTH : MAX_RECURSION_DEPTH;
+    if (incomingPayload.depth > maxDepth) {
+        if (instanceData.transparency > 0.0) {
+            float tSky = 0.5 * (rayDir.y + 1.0);
+            incomingPayload.color = mix(vec3(1.0), vec3(0.5, 0.7, 1.0), tSky);
+        } else {
+            incomingPayload.color = directLighting;
+        }
         return;
     }
     
@@ -462,12 +485,6 @@ void main()
     // ------------------------
     // Diffuse Ambient
     // ------------------------
-
-    vec3 ambientUp = vec3(0.1, 0.1, 0.1) * 0.25; // Sky color
-    vec3 ambientDown = vec3(0.1, 0.1, 0.1) * 0.15; // Ground color
-
-    float hemiMix = smoothstep(-1.0, 1.0, worldNormal.y);
-    vec3 ambientLight = mix(ambientDown, ambientUp, hemiMix);
 
     vec3 diffuseAmbient = vec3(0.0);
     if (incomingPayload.depth == 0) {
