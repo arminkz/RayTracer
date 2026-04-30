@@ -66,9 +66,20 @@ set(INCLUDES ${INCLUDES} external/imgui)
 set(INCLUDES ${INCLUDES} external/imgui/backends)
 
 # Set asset directory definition
-add_compile_definitions("ASSET_DIR=${CMAKE_SOURCE_DIR}/assets/")
+add_compile_definitions(
+    "ASSET_DIR=${CMAKE_SOURCE_DIR}/assets/"
+    GLM_FORCE_RADIANS
+    GLM_FORCE_DEPTH_ZERO_TO_ONE
+    GLM_ENABLE_EXPERIMENTAL
+)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} ${LIBRARIES})
 target_include_directories(${PROJECT_NAME} PRIVATE ${INCLUDES})
+target_precompile_headers(${PROJECT_NAME} PRIVATE src/pch.h)
+
+# ImGui manages its own include order internally; skip PCH injection for it.
+foreach(IMGUI_SOURCE ${IMGUI_SOURCES})
+    set_source_files_properties(${IMGUI_SOURCE} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+endforeach()
 message(STATUS "I hate myself so I use cmake!")
