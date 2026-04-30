@@ -367,6 +367,24 @@ void RayTracingRenderer::buildUI() {
 
     ImGui::Separator();
 
+    ImGui::Text(ICON_FA_EXPAND " SSAA");
+    ImGui::Indent(16.0f);
+        int prevScale = static_cast<int>(_supersampleScale);
+        ImGui::RadioButton("1x", (int*)&_supersampleScale, 1); ImGui::SameLine();
+        ImGui::RadioButton("2x", (int*)&_supersampleScale, 2);
+        if (static_cast<int>(_supersampleScale) != prevScale) {
+            vkDeviceWaitIdle(_ctx->device);
+            _storageImage = std::make_unique<StorageImage>(_ctx,
+                _swapChain->getSwapChainExtent().width  * _supersampleScale,
+                _swapChain->getSwapChainExtent().height * _supersampleScale,
+                VulkanHelper::convertToUnormFormat(_swapChain->getSwapChainImageFormat()));
+            createDescriptorSets();
+            spdlog::info("SSAA changed to {}x.", _supersampleScale);
+        }
+    ImGui::Unindent(16.0f);
+
+    ImGui::Separator();
+
     // Scene selector
     ImGui::Text(ICON_FA_FILM " Scene");
     ImGui::Indent(16.0f);

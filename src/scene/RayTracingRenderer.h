@@ -72,7 +72,7 @@ private:
     void createShaderBindingTables();
 
     // Super Sampling Anti-Aliasing (SSAA)
-    const uint32_t _supersampleScale = 2;
+    uint32_t _supersampleScale = 2;
 
     // Camera
     std::unique_ptr<TurnTableCamera> _camera;
