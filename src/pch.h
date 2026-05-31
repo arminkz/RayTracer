@@ -26,7 +26,6 @@
 #include <cmath>
 #include <chrono>
 #include <cstdint>
-#include <execution>
 #include <fstream>
 #include <functional>
 #include <iostream>

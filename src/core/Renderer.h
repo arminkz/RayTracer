@@ -10,6 +10,11 @@ public:
         : _ctx(std::move(ctx)), _swapChain(std::move(swapChain)) {}
     virtual ~Renderer() = default;
 
+    Renderer(const Renderer&) = delete;
+    Renderer& operator=(const Renderer&) = delete;
+    Renderer(Renderer&&) = delete;
+    Renderer& operator=(Renderer&&) = delete;
+
     virtual void update(uint32_t currentImage) { _currentFrame = currentImage; }
     virtual void recordToCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) = 0;
     virtual void onSwapChainRecreated() {}

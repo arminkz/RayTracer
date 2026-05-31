@@ -11,6 +11,11 @@ public:
     DeviceMesh(std::shared_ptr<VulkanContext> ctx, const HostMesh& mesh, const VkTransformMatrixKHR& transform);
     ~DeviceMesh() = default;
 
+    DeviceMesh(const DeviceMesh&) = delete;
+    DeviceMesh& operator=(const DeviceMesh&) = delete;
+    DeviceMesh(DeviceMesh&&) = delete;
+    DeviceMesh& operator=(DeviceMesh&&) = delete;
+
     uint32_t getVertexCount() const { return _vertexCount; }
     uint32_t getIndicesCount() const { return _indexCount; }
 

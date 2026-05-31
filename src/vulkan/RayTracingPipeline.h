@@ -23,6 +23,11 @@ public:
     );
     ~RayTracingPipeline();
 
+    RayTracingPipeline(const RayTracingPipeline&) = delete;
+    RayTracingPipeline& operator=(const RayTracingPipeline&) = delete;
+    RayTracingPipeline(RayTracingPipeline&&) = delete;
+    RayTracingPipeline& operator=(RayTracingPipeline&&) = delete;
+
     VkPipeline getPipeline() const { return _pipeline; }
     VkPipelineLayout getPipelineLayout() const { return _pipelineLayout; }
 

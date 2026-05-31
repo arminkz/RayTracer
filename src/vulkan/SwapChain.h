@@ -9,6 +9,11 @@ public:
     SwapChain(std::shared_ptr<VulkanContext> ctx);
     ~SwapChain();
 
+    SwapChain(const SwapChain&) = delete;
+    SwapChain& operator=(const SwapChain&) = delete;
+    SwapChain(SwapChain&&) = delete;
+    SwapChain& operator=(SwapChain&&) = delete;
+
     void createSwapChain();
     void cleanupSwapChain();
 

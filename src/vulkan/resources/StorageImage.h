@@ -9,6 +9,11 @@ public:
     StorageImage(std::shared_ptr<VulkanContext> ctx, uint32_t width, uint32_t height, VkFormat format);
     ~StorageImage();
 
+    StorageImage(const StorageImage&) = delete;
+    StorageImage& operator=(const StorageImage&) = delete;
+    StorageImage(StorageImage&&) = delete;
+    StorageImage& operator=(StorageImage&&) = delete;
+
     void destroy();
 
     VkImage getImage() const { return _image; }

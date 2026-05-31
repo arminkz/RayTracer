@@ -12,6 +12,11 @@ public:
     BLAS(std::shared_ptr<VulkanContext> ctx, const DeviceMesh& dmesh);
     ~BLAS();
 
+    BLAS(const BLAS&) = delete;
+    BLAS& operator=(const BLAS&) = delete;
+    BLAS(BLAS&&) = delete;
+    BLAS& operator=(BLAS&&) = delete;
+
     uint64_t getDeviceAddress() const { return _deviceAddress; }
 
 private:

@@ -11,6 +11,11 @@ public:
     GUI(std::shared_ptr<VulkanContext> ctx, SDL_Window* window, VkFormat swapChainImageFormat);
     ~GUI();
 
+    GUI(const GUI&) = delete;
+    GUI& operator=(const GUI&) = delete;
+    GUI(GUI&&) = delete;
+    GUI& operator=(GUI&&) = delete;
+
     // Called once per frame before recordCommandBuffer — builds CPU-side draw data
     void beginFrame();
     void buildUI();

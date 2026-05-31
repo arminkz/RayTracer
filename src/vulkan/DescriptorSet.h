@@ -32,6 +32,11 @@ public:
     DescriptorSet(std::shared_ptr<VulkanContext> ctx, const std::vector<Descriptor>& descriptors);
     ~DescriptorSet();
 
+    DescriptorSet(const DescriptorSet&) = delete;
+    DescriptorSet& operator=(const DescriptorSet&) = delete;
+    DescriptorSet(DescriptorSet&&) = delete;
+    DescriptorSet& operator=(DescriptorSet&&) = delete;
+
     VkDescriptorSetLayout getDescriptorSetLayout() const { return _descriptorSetLayout; }
     VkDescriptorSet getDescriptorSet() const { return _descriptorSet; }
 

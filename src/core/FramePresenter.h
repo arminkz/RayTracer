@@ -12,6 +12,11 @@ public:
     FramePresenter(std::shared_ptr<VulkanContext> ctx);
     ~FramePresenter();
 
+    FramePresenter(const FramePresenter&) = delete;
+    FramePresenter& operator=(const FramePresenter&) = delete;
+    FramePresenter(FramePresenter&&) = delete;
+    FramePresenter& operator=(FramePresenter&&) = delete;
+
     void present();
 
     // Route an SDL event to ImGui or the Renderer

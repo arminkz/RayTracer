@@ -11,6 +11,11 @@ public:
     TLAS(std::shared_ptr<VulkanContext> ctx, const std::vector<VkAccelerationStructureInstanceKHR>& instances);
     ~TLAS();
 
+    TLAS(const TLAS&) = delete;
+    TLAS& operator=(const TLAS&) = delete;
+    TLAS(TLAS&&) = delete;
+    TLAS& operator=(TLAS&&) = delete;
+
     void update(const std::vector<VkAccelerationStructureInstanceKHR>& instances);
 
     VkWriteDescriptorSetAccelerationStructureKHR getDescriptorInfo() const;

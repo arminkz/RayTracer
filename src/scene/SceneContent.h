@@ -11,6 +11,11 @@ public:
         : _ctx(std::move(ctx)), _graph(&graph) {}
     virtual ~SceneContent() = default;
 
+    SceneContent(const SceneContent&) = delete;
+    SceneContent& operator=(const SceneContent&) = delete;
+    SceneContent(SceneContent&&) = delete;
+    SceneContent& operator=(SceneContent&&) = delete;
+
     // Called once when scene is loaded — populate the scene graph with objects
     virtual void onLoad() = 0;
 
